@@ -1,0 +1,21 @@
+{
+  "name": "graduation-day-2026",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Graduation Day 2026 QR Registration, Eligibility Verification, and Entrance Attendance System",
+  "scripts": {
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "db:generate": "cd backend && npx prisma generate",
+    "db:migrate": "cd backend && npx prisma migrate dev --name init",
+    "seed:admin": "cd backend && npm run seed:admin",
+    "seed": "cd backend && npm run seed",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build": "cd backend && npm run build && cd ../frontend && npm run build",
+    "test": "cd backend && npm test"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

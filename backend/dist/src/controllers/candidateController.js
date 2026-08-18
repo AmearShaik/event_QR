@@ -1,0 +1,249 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.CandidateController = void 0;
+const client_1 = require("@prisma/client");
+const qrService_1 = require("../services/qrService");
+const prisma = new client_1.PrismaClient();
+class CandidateController {
+    /**
+     * Verifies candidate by Student ID against official database.
+     */
+    static async verifyCandidate(req, res) {
+        try {
+            const { studentId } = req.body;
+            if (!studentId || typeof studentId !== 'string') {
+                return res.status(400).json({ error: 'Student ID is required.' });
+            }
+            const trimmedStudentId = studentId.trim();
+            const candidate = await prisma.candidate.findUnique({
+                where: { studentId: trimmedStudentId },
+            });
+            if (!candidate) {
+                return res.status(404).json({
+                    eligible: false,
+                    status: 'NOT_FOUND',
+                    message: 'Candidate not found in the official Graduation Day 2026 list. Please contact the administration.',
+                });
+            }
+            if (candidate.normalizedPaymentStatus === 'NOT_PAID') {
+                return res.status(200).json({
+                    eligible: false,
+                    status: 'NOT_ELIGIBLE_NOT_PAID',
+                    message: 'You are currently not eligible for Graduation Day entrance based on the official payment status. Please contact the administration if you believe this is incorrect.',
+                    candidate: {
+                        studentId: candidate.studentId,
+                        name: candidate.name,
+                        program: candidate.program,
+                        paymentStatus: candidate.paymentStatus,
+                    },
+                });
+            }
+            if (candidate.normalizedPaymentStatus === 'PARTIALLY_PAID') {
+                return res.status(200).json({
+                    eligible: false,
+                    status: 'NOT_ELIGIBLE_PARTIALLY_PAID',
+                    message: 'Your payment status is partially paid. You are currently not eligible for entrance. Please contact the administration.',
+                    candidate: {
+                        studentId: candidate.studentId,
+                        name: candidate.name,
+                        program: candidate.program,
+                        paymentStatus: candidate.paymentStatus,
+                    },
+                });
+            }
+            if (!candidate.eligibilityStatus || candidate.normalizedPaymentStatus !== 'PAID') {
+                return res.status(200).json({
+                    eligible: false,
+                    status: 'NOT_ELIGIBLE',
+                    message: 'You are currently not eligible for Graduation Day entrance.',
+                    candidate: {
+                        studentId: candidate.studentId,
+                        name: candidate.name,
+                        program: candidate.program,
+                        paymentStatus: candidate.paymentStatus,
+                    },
+                });
+            }
+            return res.json({
+                eligible: true,
+                status: 'ELIGIBLE',
+                message: 'You are eligible for Graduation Day 2026.',
+                candidate: {
+                    id: candidate.id,
+                    studentId: candidate.studentId,
+                    name: candidate.name,
+                    program: candidate.program,
+                    paymentStatus: candidate.paymentStatus,
+                    registrationStatus: candidate.registrationStatus,
+                },
+            });
+        }
+        catch (err) {
+            return res.status(500).json({ error: err.message || 'Server error during verification.' });
+        }
+    }
+    /**
+     * Registers candidate & generates/retrieves single active QR token.
+     */
+    static async registerAndGetQr(req, res) {
+        try {
+            const { studentId } = req.params;
+            const { eventId: requestedEventId } = req.body;
+            if (!studentId) {
+                return res.status(400).json({ error: 'Student ID is required.' });
+            }
+            const candidate = await prisma.candidate.findUnique({
+                where: { studentId: studentId.trim() },
+            });
+            if (!candidate) {
+                return res.status(404).json({
+                    error: 'Candidate not found in the official Graduation Day 2026 list. Please contact the administration.',
+                });
+            }
+            if (candidate.normalizedPaymentStatus !== 'PAID' || !candidate.eligibilityStatus) {
+                return res.status(403).json({
+                    error: 'You are currently not eligible for entrance based on official payment status.',
+                });
+            }
+            // Find active event
+            let event = await prisma.event.findFirst({
+                where: requestedEventId
+                    ? { OR: [{ id: requestedEventId }, { slug: requestedEventId }] }
+                    : { isActive: true },
+            });
+            if (!event) {
+                // Fallback: fetch default event
+                event = await prisma.event.findFirst({ where: { slug: 'attendance' } });
+            }
+            if (!event) {
+                return res.status(400).json({ error: 'No active event available.' });
+            }
+            // Get or create single active QR token for candidate + event
+            const qrTokenStr = await qrService_1.QrService.getOrCreateActiveToken(candidate.id, event.id);
+            // Update registration status to REGISTERED
+            await prisma.candidate.update({
+                where: { id: candidate.id },
+                data: { registrationStatus: 'REGISTERED' },
+            });
+            return res.json({
+                candidate: {
+                    studentId: candidate.studentId,
+                    name: candidate.name,
+                    program: candidate.program,
+                    paymentStatus: candidate.paymentStatus,
+                },
+                event: {
+                    id: event.id,
+                    name: event.name,
+                    slug: event.slug,
+                },
+                qrToken: qrTokenStr,
+            });
+        }
+        catch (err) {
+            return res.status(500).json({ error: err.message || 'Server error during QR registration.' });
+        }
+    }
+    /**
+     * Retrieves active QR for a given Student ID.
+     */
+    /**
+     * Student Login with Roll Number as User ID & Password.
+     * Instantly verifies eligibility & generates/retrieves active QR pass.
+     */
+    static async studentLogin(req, res) {
+        try {
+            const { studentId, password } = req.body;
+            if (!studentId || !password) {
+                return res.status(400).json({ error: 'User ID (Roll Number) and Password are required.' });
+            }
+            const trimmedId = studentId.trim();
+            const trimmedPass = password.trim();
+            // Student Roll Number acts as both User ID and Password
+            if (trimmedId.toLowerCase() !== trimmedPass.toLowerCase()) {
+                return res.status(401).json({
+                    error: 'Invalid Password. For student login, your Roll Number is your User ID and Password.',
+                });
+            }
+            const candidate = await prisma.candidate.findUnique({
+                where: { studentId: trimmedId },
+            });
+            if (!candidate) {
+                return res.status(404).json({
+                    eligible: false,
+                    status: 'NOT_FOUND',
+                    error: 'Student record not found. Please verify your Roll Number with the administration.',
+                });
+            }
+            if (candidate.normalizedPaymentStatus !== 'PAID' || !candidate.eligibilityStatus) {
+                return res.status(200).json({
+                    eligible: false,
+                    status: 'NOT_ELIGIBLE',
+                    message: `Student ${candidate.name} (${candidate.studentId}) is currently not eligible for entrance. Payment Status: ${candidate.paymentStatus}.`,
+                    candidate: {
+                        id: candidate.id,
+                        studentId: candidate.studentId,
+                        name: candidate.name,
+                        program: candidate.program,
+                        paymentStatus: candidate.paymentStatus,
+                        eligibilityStatus: candidate.eligibilityStatus,
+                    },
+                });
+            }
+            // Active Event lookup
+            let activeEvent = await prisma.event.findFirst({ where: { isActive: true } });
+            if (!activeEvent) {
+                activeEvent = await prisma.event.findFirst({ where: { slug: 'attendance' } });
+            }
+            if (!activeEvent) {
+                return res.status(400).json({ error: 'No active ceremony event available.' });
+            }
+            // Get or create single active QR token immediately for candidate + event
+            const qrTokenStr = await qrService_1.QrService.getOrCreateActiveToken(candidate.id, activeEvent.id);
+            // Update registration status to REGISTERED
+            await prisma.candidate.update({
+                where: { id: candidate.id },
+                data: { registrationStatus: 'REGISTERED' },
+            });
+            // Fetch real-time attendance record if already scanned
+            const attendance = await prisma.attendance.findUnique({
+                where: {
+                    candidateId_eventId: {
+                        candidateId: candidate.id,
+                        eventId: activeEvent.id,
+                    },
+                },
+            });
+            return res.json({
+                eligible: true,
+                status: 'ELIGIBLE',
+                message: 'Student authenticated successfully.',
+                candidate: {
+                    id: candidate.id,
+                    studentId: candidate.studentId,
+                    name: candidate.name,
+                    program: candidate.program,
+                    paymentStatus: candidate.paymentStatus,
+                    registrationStatus: 'REGISTERED',
+                },
+                event: {
+                    id: activeEvent.id,
+                    name: activeEvent.name,
+                    slug: activeEvent.slug,
+                },
+                qrToken: qrTokenStr,
+                attendance: attendance
+                    ? {
+                        id: attendance.id,
+                        entryTime: attendance.entryTime.toISOString(),
+                        status: attendance.status,
+                    }
+                    : null,
+            });
+        }
+        catch (err) {
+            return res.status(500).json({ error: err.message || 'Server error during student login.' });
+        }
+    }
+}
+exports.CandidateController = CandidateController;

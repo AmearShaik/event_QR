@@ -1,0 +1,97 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.AttendanceController = void 0;
+const client_1 = require("@prisma/client");
+const attendanceService_1 = require("../services/attendanceService");
+const prisma = new client_1.PrismaClient();
+class AttendanceController {
+    /**
+     * Endpoint: POST /api/attendance/scan
+     */
+    static async scan(req, res) {
+        try {
+            const { token, eventId } = req.body;
+            if (!token) {
+                return res.status(400).json({ status: 'INVALID', message: 'QR token is required.' });
+            }
+            // Default event fallback if eventId not specified
+            let targetEventId = eventId;
+            if (!targetEventId) {
+                const activeEvent = await prisma.event.findFirst({ where: { isActive: true } });
+                targetEventId = activeEvent ? activeEvent.id : 'attendance';
+            }
+            const result = await attendanceService_1.AttendanceService.scanQrToken(token, targetEventId);
+            return res.json(result);
+        }
+        catch (err) {
+            return res.status(500).json({
+                status: 'INVALID',
+                message: err.message || 'Server error processing scan.',
+            });
+        }
+    }
+    /**
+     * Endpoint: GET /api/admin/attendance
+     */
+    static async listAttendance(req, res) {
+        try {
+            const { search, eventId, page = '1', limit = '50' } = req.query;
+            const pageNum = parseInt(page, 10) || 1;
+            const limitNum = parseInt(limit, 10) || 50;
+            const skip = (pageNum - 1) * limitNum;
+            const where = {};
+            if (eventId && typeof eventId === 'string') {
+                where.eventId = eventId;
+            }
+            if (search && typeof search === 'string') {
+                const query = search.trim();
+                where.candidate = {
+                    OR: [
+                        { studentId: { contains: query } },
+                        { name: { contains: query } },
+                        { program: { contains: query } },
+                    ],
+                };
+            }
+            const [totalCount, records] = await Promise.all([
+                prisma.attendance.count({ where }),
+                prisma.attendance.findMany({
+                    where,
+                    include: {
+                        candidate: true,
+                        event: true,
+                    },
+                    orderBy: { entryTime: 'desc' },
+                    skip,
+                    take: limitNum,
+                }),
+            ]);
+            const formatted = records.map((r) => ({
+                id: r.id,
+                candidateId: r.candidateId,
+                studentId: r.candidate.studentId,
+                candidateName: r.candidate.name,
+                program: r.candidate.program,
+                paymentStatus: r.candidate.paymentStatus,
+                eligibilityStatus: r.candidate.eligibilityStatus,
+                eventId: r.eventId,
+                eventName: r.event.name,
+                entryTime: r.entryTime.toISOString(),
+                status: r.status,
+            }));
+            return res.json({
+                records: formatted,
+                pagination: {
+                    total: totalCount,
+                    page: pageNum,
+                    limit: limitNum,
+                    totalPages: Math.ceil(totalCount / limitNum),
+                },
+            });
+        }
+        catch (err) {
+            return res.status(500).json({ error: err.message || 'Error listing attendance records.' });
+        }
+    }
+}
+exports.AttendanceController = AttendanceController;
