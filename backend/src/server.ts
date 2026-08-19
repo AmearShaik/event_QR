@@ -8,3 +8,4 @@ app.listen(PORT, () => {
   console.log(` API Endpoint: http://localhost:${PORT}/api`);
   console.log(`===================================================`);
 });
+module.exports = app;
