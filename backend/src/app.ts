@@ -30,6 +30,17 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', system: 'Graduation Day 2026 System', timestamp: new Date().toISOString() });
 });
 
+// API root - provide a simple index for the API
+app.get('/api', (req, res) => {
+  res.json({
+    status: 'API running',
+    message: 'Graduation Day 2026 API',
+    endpoints: {
+      health: '/api/health',
+    },
+  });
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 

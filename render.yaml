@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: graduation-day-backend
+    env: node
+    rootDir: backend
+    plan: free
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npx prisma db push && node prisma/seedAdmin.js && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        value: file:./dev.db
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 12h
+      - key: DEFAULT_ADMIN_USERNAME
+        value: admin@graduation.edu
+      - key: DEFAULT_ADMIN_PASSWORD
+        value: Admin@2026Password!
+      - key: DEFAULT_ADMIN_NAME
+        value: Graduation Admin

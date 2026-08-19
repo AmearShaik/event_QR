@@ -26,6 +26,16 @@ app.use(express_1.default.urlencoded({ extended: true }));
 app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', system: 'Graduation Day 2026 System', timestamp: new Date().toISOString() });
 });
+// API root - provide a simple index for the API
+app.get('/api', (req, res) => {
+    res.json({
+        status: 'API running',
+        message: 'Graduation Day 2026 API',
+        endpoints: {
+            health: '/api/health',
+        },
+    });
+});
 // API Routes
 app.use('/api/auth', authRoutes_1.default);
 app.use('/api/candidate', candidateRoutes_1.default);

@@ -11,3 +11,4 @@ app_1.default.listen(PORT, () => {
     console.log(` API Endpoint: http://localhost:${PORT}/api`);
     console.log(`===================================================`);
 });
+module.exports = app_1.default;
