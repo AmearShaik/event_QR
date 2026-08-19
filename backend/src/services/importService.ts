@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import * as xlsx from 'xlsx';
 import { parse as parseCsv } from 'csv-parse/sync';
 import { EligibilityService } from './eligibilityService';
-import { ImportPreviewRow, ImportPreviewResponse, ImportConfirmResponse } from '../../../shared/types';
+import { ImportPreviewRow, ImportPreviewResponse, ImportConfirmResponse } from '../types';
 
 const prisma = new PrismaClient();
 

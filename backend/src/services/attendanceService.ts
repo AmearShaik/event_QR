@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { ScanResponse } from '../../../shared/types';
+import { ScanResponse } from '../types';
 
 const prisma = new PrismaClient();
 

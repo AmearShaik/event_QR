@@ -1,4 +1,4 @@
-import { NormalizedPaymentStatus } from '../../../shared/types';
+import { NormalizedPaymentStatus } from '../types';
 
 export class EligibilityService {
   /**
