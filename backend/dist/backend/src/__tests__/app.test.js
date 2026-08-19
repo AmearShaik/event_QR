@@ -253,4 +253,47 @@ let adminToken;
         (0, vitest_1.expect)(preview.invalidRows).toBe(1);
         (0, vitest_1.expect)(preview.previewRows[1].error).toContain('Duplicate Student ID in file');
     });
+    (0, vitest_1.it)('Test 8 — Student Login (Roll Number as User ID & Password)', async () => {
+        // 1. Create Paid Candidate for Student Login test
+        await prisma.candidate.create({
+            data: {
+                studentId: 'STUDENT_LOGIN_001',
+                name: 'Login Test Student',
+                program: 'BE - IT',
+                paymentStatus: 'Paid',
+                normalizedPaymentStatus: 'PAID',
+                eligibilityStatus: true,
+            },
+        });
+        // 2. Student Login with studentId as User ID and Password
+        const loginRes = await (0, supertest_1.default)(app_1.default)
+            .post('/api/candidate/login')
+            .send({
+            studentId: 'STUDENT_LOGIN_001',
+            password: 'STUDENT_LOGIN_001',
+        });
+        (0, vitest_1.expect)(loginRes.status).toBe(200);
+        (0, vitest_1.expect)(loginRes.body.eligible).toBe(true);
+        (0, vitest_1.expect)(loginRes.body.status).toBe('ELIGIBLE');
+        (0, vitest_1.expect)(loginRes.body.qrToken).toBeDefined();
+        (0, vitest_1.expect)(loginRes.body.candidate.studentId).toBe('STUDENT_LOGIN_001');
+        // 3. Scan student's QR code from Admin Scanner
+        const token = loginRes.body.qrToken;
+        const scanRes = await (0, supertest_1.default)(app_1.default)
+            .post('/api/attendance/scan')
+            .set('Authorization', `Bearer ${adminToken}`)
+            .send({ token, eventId: 'attendance' });
+        (0, vitest_1.expect)(scanRes.status).toBe(200);
+        (0, vitest_1.expect)(scanRes.body.status).toBe('SUCCESS');
+        // 4. Student logs in again -> should show attendance record
+        const secondLoginRes = await (0, supertest_1.default)(app_1.default)
+            .post('/api/candidate/login')
+            .send({
+            studentId: 'STUDENT_LOGIN_001',
+            password: 'STUDENT_LOGIN_001',
+        });
+        (0, vitest_1.expect)(secondLoginRes.status).toBe(200);
+        (0, vitest_1.expect)(secondLoginRes.body.attendance).toBeDefined();
+        (0, vitest_1.expect)(secondLoginRes.body.attendance.status).toBe('SUCCESS');
+    });
 });

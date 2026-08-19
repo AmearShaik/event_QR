@@ -30,11 +30,14 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes_1.default);
 app.use('/api/candidate', candidateRoutes_1.default);
 app.use('/api/candidates', candidateRoutes_1.default);
+app.use('/api/import', importRoutes_1.default);
 app.use('/api/admin/import', importRoutes_1.default);
 app.use('/api/admin/candidates', adminCandidatesRoutes_1.default);
 app.use('/api/attendance', attendanceRoutes_1.default);
 app.use('/api/admin/attendance', attendanceRoutes_1.default);
+app.use('/api/events', eventRoutes_1.default);
 app.use('/api/admin/events', eventRoutes_1.default);
+app.use('/api/dashboard', dashboardRoutes_1.default);
 app.use('/api/admin/dashboard', dashboardRoutes_1.default);
 // Global Error Handler
 app.use((err, req, res, next) => {

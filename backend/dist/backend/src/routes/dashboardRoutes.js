@@ -5,4 +5,5 @@ const dashboardController_1 = require("../controllers/dashboardController");
 const authMiddleware_1 = require("../middleware/authMiddleware");
 const router = (0, express_1.Router)();
 router.get('/', authMiddleware_1.requireAdminAuth, dashboardController_1.DashboardController.getStats);
+router.get('/stats', authMiddleware_1.requireAdminAuth, dashboardController_1.DashboardController.getStats);
 exports.default = router;

@@ -179,7 +179,7 @@ export const AdminDashboard: React.FC = () => {
               Gate Scanner Status
             </h4>
             <p className="text-sm font-semibold text-slate-200">
-              Active Event: {stats.activeEvent ? stats.activeEvent.name : 'Graduation Day 2026'}
+             Active Event: Graduation Day 2026
             </p>
           </div>
           <div className="bg-slate-900/80 rounded-2xl p-4 border border-slate-700/60 text-xs text-slate-400 space-y-1 mt-4">

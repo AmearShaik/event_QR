@@ -93,5 +93,26 @@ class AttendanceController {
             return res.status(500).json({ error: err.message || 'Error listing attendance records.' });
         }
     }
+    /**
+     * Endpoint: GET /api/admin/attendance/export-csv
+     */
+    static async exportCSV(req, res) {
+        try {
+            const records = await prisma.attendance.findMany({
+                include: { candidate: true, event: true },
+                orderBy: { entryTime: 'desc' },
+            });
+            let csv = 'ID,Student ID,Candidate Name,Program,Payment Status,Event,Entry Time,Status\n';
+            for (const r of records) {
+                csv += `"${r.id}","${r.candidate.studentId}","${r.candidate.name}","${r.candidate.program}","${r.candidate.paymentStatus}","${r.event.name}","${r.entryTime.toISOString()}","${r.status}"\n`;
+            }
+            res.setHeader('Content-Type', 'text/csv');
+            res.setHeader('Content-Disposition', `attachment; filename="Graduation-Attendance-${Date.now()}.csv"`);
+            return res.status(200).send(csv);
+        }
+        catch (err) {
+            return res.status(500).json({ error: err.message || 'CSV export error' });
+        }
+    }
 }
 exports.AttendanceController = AttendanceController;
