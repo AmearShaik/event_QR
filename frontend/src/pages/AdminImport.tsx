@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { ImportPreviewResponse, ImportConfirmResponse } from '../types';
-import { Upload, FileSpreadsheet, CheckCircle2, XCircle, Info, ArrowRight, RefreshCw } from '../components/Icons';
+import { Upload, FileSpreadsheet, CheckCircle2, XCircle, Info, ArrowRight, RefreshCw, Clock } from '../components/Icons';
 import { StatusBadge } from '../components/StatusBadge';
 
 export const AdminImport: React.FC = () => {
@@ -11,6 +11,25 @@ export const AdminImport: React.FC = () => {
   const [previewData, setPreviewData] = useState<ImportPreviewResponse | null>(null);
   const [confirmResult, setConfirmResult] = useState<ImportConfirmResponse | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  
+  const [importLogs, setImportLogs] = useState<any[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState<boolean>(true);
+
+  const fetchLogs = async () => {
+    setLoadingLogs(true);
+    try {
+      const data = await api.getImportLogs();
+      setImportLogs(data);
+    } catch (err: any) {
+      console.error('Failed to load import history:', err);
+    } finally {
+      setLoadingLogs(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLogs();
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -270,6 +289,7 @@ export const AdminImport: React.FC = () => {
             onClick={() => {
               setConfirmResult(null);
               setSelectedFile(null);
+              fetchLogs();
             }}
             className="py-3 px-6 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
           >
@@ -277,6 +297,63 @@ export const AdminImport: React.FC = () => {
           </button>
         </div>
       )}
+
+      {/* Import History Section */}
+      <div className="bg-slate-800/80 backdrop-blur-xl border border-slate-700/80 rounded-3xl p-6 sm:p-8 shadow-xl mt-8">
+        <div className="flex items-center justify-between mb-6 border-b border-slate-700 pb-4">
+          <div>
+            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+              <Clock className="w-5 h-5 text-sky-400" /> Import History
+            </h3>
+            <p className="text-xs text-slate-400 mt-1">Recent official candidate data imports.</p>
+          </div>
+          <button 
+            onClick={fetchLogs} 
+            className="text-xs font-semibold px-4 py-2 rounded-xl bg-slate-700/50 hover:bg-slate-700 text-slate-300 transition-colors"
+          >
+            <RefreshCw className={`w-4 h-4 ${loadingLogs ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+
+        {loadingLogs ? (
+          <div className="flex justify-center p-8">
+            <RefreshCw className="w-6 h-6 text-emerald-500 animate-spin" />
+          </div>
+        ) : importLogs.length === 0 ? (
+          <p className="text-slate-400 text-sm text-center py-8">No import history found.</p>
+        ) : (
+          <div className="overflow-x-auto rounded-2xl border border-slate-700">
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-900 text-slate-400 uppercase tracking-wider text-[10px] font-bold">
+                <tr>
+                  <th className="py-3 px-4">Date</th>
+                  <th className="py-3 px-4">Filename</th>
+                  <th className="py-3 px-4">Total</th>
+                  <th className="py-3 px-4 text-emerald-400">New</th>
+                  <th className="py-3 px-4 text-sky-400">Updated</th>
+                  <th className="py-3 px-4 text-rose-400">Errors</th>
+                  <th className="py-3 px-4">Admin ID</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-700/60 font-medium">
+                {importLogs.map((log) => (
+                  <tr key={log.id} className="hover:bg-slate-700/30">
+                    <td className="py-3 px-4 text-white">
+                      {new Date(log.createdAt).toLocaleString()}
+                    </td>
+                    <td className="py-3 px-4 text-slate-300">{log.filename}</td>
+                    <td className="py-3 px-4">{log.totalRows}</td>
+                    <td className="py-3 px-4 text-emerald-400">{log.newCandidates}</td>
+                    <td className="py-3 px-4 text-sky-400">{log.updatedCandidates}</td>
+                    <td className="py-3 px-4 text-rose-400">{log.errorRows}</td>
+                    <td className="py-3 px-4 font-mono text-slate-500">{log.adminId}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

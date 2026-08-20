@@ -10,8 +10,9 @@ export class AttendanceController {
    */
   static async scan(req: Request, res: Response) {
     try {
-      const { token, eventId } = req.body;
-      if (!token) {
+      const { token, qrToken, eventId } = req.body;
+      const actualToken = token || qrToken;
+      if (!actualToken) {
         return res.status(400).json({ status: 'INVALID', message: 'QR token is required.' });
       }
 
@@ -22,7 +23,7 @@ export class AttendanceController {
         targetEventId = activeEvent ? activeEvent.id : 'attendance';
       }
 
-      const result = await AttendanceService.scanQrToken(token, targetEventId);
+      const result = await AttendanceService.scanQrToken(actualToken, targetEventId);
       return res.json(result);
     } catch (err: any) {
       return res.status(500).json({

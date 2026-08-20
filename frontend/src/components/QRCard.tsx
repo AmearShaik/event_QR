@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Download, CheckCircle2, GraduationCap, ShieldCheck } from './Icons';
 import { StatusBadge } from './StatusBadge';
+import { api } from '../services/api';
 
 interface QRCardProps {
   candidate: {
@@ -111,11 +112,32 @@ export const QRCard: React.FC<QRCardProps> = ({ candidate, event, token }) => {
       ctx.font = '12px sans-serif';
       ctx.fillText('Present this pass at the gate scanner for entrance verification.', 300, 685);
 
-      // Download trigger
-      const link = document.createElement('a');
-      link.download = `Graduation-Pass-${candidate.studentId}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
+      const dataUrl = canvas.toDataURL('image/png');
+
+      if (api.isNative()) {
+        const { Filesystem, Directory } = await import('@capacitor/filesystem');
+        const { Share } = await import('@capacitor/share');
+        
+        const fileName = `Graduation-Pass-${candidate.studentId}.png`;
+        const result = await Filesystem.writeFile({
+          path: fileName,
+          data: dataUrl.split(',')[1],
+          directory: Directory.Cache
+        });
+
+        await Share.share({
+          title: 'Graduation Pass',
+          text: 'Here is my Graduation Day 2026 Pass',
+          url: result.uri,
+          dialogTitle: 'Save or Share Pass'
+        });
+      } else {
+        // Fallback for web
+        const link = document.createElement('a');
+        link.download = `Graduation-Pass-${candidate.studentId}.png`;
+        link.href = dataUrl;
+        link.click();
+      }
     } catch (err) {
       console.error('PNG export error', err);
     }

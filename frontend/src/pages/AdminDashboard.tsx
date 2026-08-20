@@ -10,12 +10,33 @@ import {
   TrendingUp,
   RefreshCw,
   Award,
+  Download,
 } from '../components/Icons';
 
 export const AdminDashboard: React.FC = () => {
   const [stats, setStats] = useState<(DashboardStats & { programBreakdown: any[] }) | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState<boolean>(false);
+
+  const handleExportCSV = async () => {
+    setExporting(true);
+    try {
+      const { blob, filename } = await api.exportAttendanceCSV();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+    } catch (err: any) {
+      alert(err.message || 'Failed to export CSV');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const fetchStats = async () => {
     setLoading(true);
@@ -68,13 +89,27 @@ export const AdminDashboard: React.FC = () => {
             Real-time candidate eligibility, QR distribution, and entrance attendance analytics.
           </p>
         </div>
-        <button
-          onClick={fetchStats}
-          className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer"
-        >
-          <RefreshCw className="w-4 h-4 text-emerald-400" />
-          Refresh Stats
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={handleExportCSV}
+            disabled={exporting}
+            className="flex items-center gap-2 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/50 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer disabled:opacity-50"
+          >
+            {exporting ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            Export CSV
+          </button>
+          <button
+            onClick={fetchStats}
+            className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+          >
+            <RefreshCw className="w-4 h-4 text-emerald-400" />
+            Refresh Stats
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">

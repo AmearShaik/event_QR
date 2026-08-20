@@ -253,6 +253,14 @@ export const api = {
     return handleResponse(res, 'Failed to load candidate list.');
   },
 
+  // Import History
+  getImportLogs: async (): Promise<any[]> => {
+    const res = await safeFetch(`${getApiBaseUrl()}/admin/import/history`, {
+      headers: { ...getAuthHeader() },
+    });
+    return handleResponse(res, 'Failed to fetch import logs');
+  },
+
   // Gate Scanner
   scanToken: async (qrToken: string, eventId?: string): Promise<ScanResponse> => {
     const res = await safeFetch(`${getApiBaseUrl()}/attendance/scan`, {
@@ -280,7 +288,7 @@ export const api = {
   },
 
   exportAttendanceCSV: async () => {
-    const res = await safeFetch(`${getApiBaseUrl()}/admin/attendance/export-csv`, {
+    const res = await safeFetch(`${getApiBaseUrl()}/attendance/export-csv`, {
       headers: { ...getAuthHeader() },
     });
     if (!res.ok) throw new Error('Failed to export CSV report');
@@ -291,7 +299,7 @@ export const api = {
     };
   },
 
-  // Ceremony Events Management
+  // Events & Ceremony Events Management
   getEvents: async () => {
     const res = await safeFetch(`${getApiBaseUrl()}/admin/events`, {
       headers: { ...getAuthHeader() },

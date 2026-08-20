@@ -14,6 +14,8 @@ import {
   Server,
   Wifi,
   CheckCircle2,
+  Eye,
+  EyeOff,
 } from '../components/Icons';
 import { ServerConfigModal } from '../components/ServerConfigModal';
 
@@ -24,12 +26,14 @@ export const LoginPage: React.FC = () => {
   // Student State - Initialized completely empty
   const [studentId, setStudentId] = useState<string>('');
   const [studentPassword, setStudentPassword] = useState<string>('');
+  const [showStudentPassword, setShowStudentPassword] = useState<boolean>(false);
   const [studentLoading, setStudentLoading] = useState<boolean>(false);
   const [studentError, setStudentError] = useState<string | null>(null);
 
   // Admin State - Initialized completely empty
   const [adminUsername, setAdminUsername] = useState<string>('');
   const [adminPassword, setAdminPassword] = useState<string>('');
+  const [showAdminPassword, setShowAdminPassword] = useState<boolean>(false);
   const [adminLoading, setAdminLoading] = useState<boolean>(false);
   const [adminError, setAdminError] = useState<string | null>(null);
 
@@ -196,13 +200,20 @@ export const LoginPage: React.FC = () => {
                 </label>
                 <div className="relative">
                   <input
-                    type="password"
+                    type={showStudentPassword ? 'text' : 'password'}
                     value={studentPassword}
                     onChange={(e) => setStudentPassword(e.target.value)}
                     placeholder="Enter your Password (Roll Number)"
-                    className="w-full bg-slate-900 border border-slate-700 rounded-2xl py-3.5 pl-11 pr-4 text-white placeholder-slate-500 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-2xl py-3.5 pl-11 pr-12 text-white placeholder-slate-500 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                   />
                   <Lock className="w-5 h-5 text-slate-500 absolute left-3.5 top-3.5" />
+                  <button
+                    type="button"
+                    onClick={() => setShowStudentPassword(!showStudentPassword)}
+                    className="absolute right-3.5 top-3.5 text-slate-500 hover:text-emerald-400 focus:outline-none transition-colors"
+                  >
+                    {showStudentPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
                 </div>
               </div>
 
@@ -278,14 +289,21 @@ export const LoginPage: React.FC = () => {
                 </label>
                 <div className="relative">
                   <input
-                    type="password"
+                    type={showAdminPassword ? 'text' : 'password'}
                     value={adminPassword}
                     onChange={(e) => setAdminPassword(e.target.value)}
                     placeholder="Enter Admin Password"
                     required
-                    className="w-full bg-slate-900 border border-slate-700 rounded-2xl py-3.5 pl-11 pr-4 text-white placeholder-slate-500 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-2xl py-3.5 pl-11 pr-12 text-white placeholder-slate-500 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                   />
                   <Lock className="w-5 h-5 text-slate-500 absolute left-3.5 top-3.5" />
+                  <button
+                    type="button"
+                    onClick={() => setShowAdminPassword(!showAdminPassword)}
+                    className="absolute right-3.5 top-3.5 text-slate-500 hover:text-emerald-400 focus:outline-none transition-colors"
+                  >
+                    {showAdminPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
                 </div>
               </div>
 

@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
-import { ShieldCheck, AlertCircle } from '../components/Icons';
+import { ShieldCheck, AlertCircle, Eye, EyeOff } from '../components/Icons';
 
 export const AdminLogin: React.FC = () => {
   const [username, setUsername] = useState<string>('');
   const [password, setPassword] = useState<string>('');
+  const [showPassword, setShowPassword] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -70,14 +71,23 @@ export const AdminLogin: React.FC = () => {
             <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
               Password
             </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter Admin Password"
-              required
-              className="w-full bg-slate-900 border border-slate-700 rounded-2xl py-3 px-4 text-white text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter Admin Password"
+                required
+                className="w-full bg-slate-900 border border-slate-700 rounded-2xl py-3 px-4 pr-12 text-white text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-3.5 text-slate-500 hover:text-emerald-400 focus:outline-none transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
 
           <button

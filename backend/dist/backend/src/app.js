@@ -23,9 +23,14 @@ app.use((0, cors_1.default)({
 }));
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: true }));
-// Health Check Endpoint
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'OK', system: 'Graduation Day 2026 System', timestamp: new Date().toISOString() });
+// Health Check & Root Endpoints
+app.get(['/', '/health', '/api/health'], (req, res) => {
+    res.json({
+        status: 'OK',
+        system: 'Graduation Day 2026 System',
+        timestamp: new Date().toISOString(),
+        api: '/api',
+    });
 });
 // Direct APK Download Endpoint for mobile devices
 app.get(['/download/apk', '/api/download/apk'], (req, res) => {
