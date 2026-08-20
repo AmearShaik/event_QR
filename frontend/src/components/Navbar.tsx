@@ -156,19 +156,18 @@ export const Navbar: React.FC = () => {
             </button>
           </nav>
 
-          {/* Mobile Server Button */}
+          {/* Mobile Auth Actions */}
           <div className="flex md:hidden items-center gap-2">
-            <button
-              onClick={() => setShowServerModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700 text-slate-300 hover:text-emerald-300 hover:border-emerald-500/40 transition-colors text-xs font-semibold cursor-pointer relative"
-              title="Server Connection Settings"
-            >
-              <Server className="w-4 h-4 text-emerald-400" />
-              <span>Server</span>
-              {isServerConfigured && (
-                <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
-              )}
-            </button>
+            {role === 'ADMIN' && (
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 transition-colors cursor-pointer text-xs font-semibold"
+                title="Sign Out"
+              >
+                <Power className="w-4 h-4" />
+                <span>Sign Out</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
