@@ -124,4 +124,16 @@ export class AttendanceController {
       return res.status(500).json({ error: err.message || 'CSV export error' });
     }
   }
+
+  /**
+   * Endpoint: DELETE /api/attendance/reset
+   */
+  static async reset(req: Request, res: Response) {
+    try {
+      const result = await prisma.attendance.deleteMany({});
+      return res.json({ message: `Successfully deleted ${result.count} attendance records.` });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message || 'Error resetting attendance.' });
+    }
+  }
 }

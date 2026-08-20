@@ -27,12 +27,15 @@ if (Test-Path $sdkPath) {
 # 3. Build Frontend
 Write-Host "[3/5] Building React Frontend with Vite..." -ForegroundColor Cyan
 Set-Location "$PSScriptRoot\frontend"
+if (Test-Path "dist") { Remove-Item -Recurse -Force "dist" }
 npm run build
 if ($LASTEXITCODE -ne 0) { throw "Frontend build failed" }
 Set-Location $PSScriptRoot
 
 # 4. Sync Capacitor
 Write-Host "[4/5] Syncing Capacitor Android assets..." -ForegroundColor Cyan
+Set-Location $PSScriptRoot
+if (Test-Path "android\app\src\main\assets\public") { Remove-Item -Recurse -Force "android\app\src\main\assets\public" }
 npx cap sync android
 if ($LASTEXITCODE -ne 0) { throw "Capacitor sync failed" }
 

@@ -11,5 +11,6 @@ router.post('/scan', requireAdminAuth, AttendanceController.scan);
 router.get('/', requireAdminAuth, AttendanceController.listAttendance);
 router.get('/logs', requireAdminAuth, AttendanceController.listAttendance);
 router.get('/export-csv', requireAdminAuth, AttendanceController.exportCSV);
+router.delete('/reset', requireAdminAuth, AttendanceController.reset);
 
 export default router;

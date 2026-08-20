@@ -18,6 +18,7 @@ export const AdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState<boolean>(false);
+  const [resetting, setResetting] = useState<boolean>(false);
 
   const handleExportCSV = async () => {
     setExporting(true);
@@ -35,6 +36,22 @@ export const AdminDashboard: React.FC = () => {
       alert(err.message || 'Failed to export CSV');
     } finally {
       setExporting(false);
+    }
+  };
+
+  const handleResetAttendance = async () => {
+    if (!window.confirm('Are you sure you want to clear ALL attendance records? This action cannot be undone and is intended for test data cleanup only.')) {
+      return;
+    }
+    setResetting(true);
+    try {
+      await api.resetAttendance();
+      alert('Attendance records cleared successfully.');
+      fetchStats();
+    } catch (err: any) {
+      alert(err.message || 'Failed to clear attendance records');
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -90,6 +107,18 @@ export const AdminDashboard: React.FC = () => {
           </p>
         </div>
         <div className="flex gap-3">
+          <button
+            onClick={handleResetAttendance}
+            disabled={resetting}
+            className="flex items-center gap-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/50 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer disabled:opacity-50"
+          >
+            {resetting ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <XCircle className="w-4 h-4" />
+            )}
+            Clear Attendance
+          </button>
           <button
             onClick={handleExportCSV}
             disabled={exporting}

@@ -299,6 +299,14 @@ export const api = {
     };
   },
 
+  resetAttendance: async () => {
+    const res = await safeFetch(`${getApiBaseUrl()}/attendance/reset`, {
+      method: 'DELETE',
+      headers: { ...getAuthHeader() },
+    });
+    return handleResponse(res, 'Failed to reset attendance.');
+  },
+
   // Events & Ceremony Events Management
   getEvents: async () => {
     const res = await safeFetch(`${getApiBaseUrl()}/admin/events`, {

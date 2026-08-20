@@ -12,9 +12,10 @@ import {
   LogOut,
   LogIn,
   ShieldCheck,
-  UserCheck,
   Server,
   Wifi,
+  Power,
+  UserCheck,
 } from './Icons';
 import { ServerConfigModal } from './ServerConfigModal';
 import { api } from '../services/api';
@@ -102,7 +103,7 @@ export const Navbar: React.FC = () => {
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
                   title="Sign Out"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <Power className="w-4 h-4" />
                   <span>Sign Out</span>
                 </button>
               </>
@@ -205,7 +206,7 @@ export const Navbar: React.FC = () => {
                 onClick={handleLogout}
                 className="text-xs font-semibold text-rose-400 flex items-center gap-1"
               >
-                <LogOut className="w-3.5 h-3.5" /> Sign Out
+                <Power className="w-3.5 h-3.5" /> Sign Out
               </button>
             </div>
           )}
