@@ -67,8 +67,6 @@ export const QRScanner: React.FC<QRScannerProps> = ({
         cameraId,
         {
           fps: 10,
-          qrbox: { width: 260, height: 260 },
-          aspectRatio: 1.0,
         },
         onQrCodeScanned,
         () => {}

@@ -91,8 +91,9 @@ export const QRCard: React.FC<QRCardProps> = ({ candidate, event, token }) => {
         const image = new Image();
         image.src = 'data:image/svg+xml;base64,' + svg64;
 
-        await new Promise((resolve) => {
+        await new Promise((resolve, reject) => {
           image.onload = resolve;
+          image.onerror = reject;
         });
 
         // White background box for QR code
@@ -136,7 +137,9 @@ export const QRCard: React.FC<QRCardProps> = ({ candidate, event, token }) => {
         const link = document.createElement('a');
         link.download = `Graduation-Pass-${candidate.studentId}.png`;
         link.href = dataUrl;
+        document.body.appendChild(link);
         link.click();
+        document.body.removeChild(link);
       }
     } catch (err) {
       console.error('PNG export error', err);
