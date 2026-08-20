@@ -127,6 +127,7 @@ export const QRCard: React.FC<QRCardProps> = ({ candidate, event, token }) => {
 
       if (api.isNative()) {
         const { Filesystem, Directory } = await import('@capacitor/filesystem');
+        const { Media } = await import('@capacitor-community/media');
         
         const fileName = `Graduation-Pass-${candidate.studentId}.png`;
         let uri = '';
@@ -134,36 +135,22 @@ export const QRCard: React.FC<QRCardProps> = ({ candidate, event, token }) => {
           const result = await Filesystem.writeFile({
             path: fileName,
             data: dataUrl.split(',')[1],
-            directory: Directory.Documents
+            directory: Directory.Cache
           });
           uri = result.uri;
         } catch (fsErr: any) {
-          console.error('Failed Documents dir, trying Cache', fsErr);
-          try {
-            const result = await Filesystem.writeFile({
-              path: fileName,
-              data: dataUrl.split(',')[1],
-              directory: Directory.Cache
-            });
-            uri = result.uri;
-          } catch (cacheErr: any) {
-            showToast('Filesystem error: ' + cacheErr.message);
-            return;
-          }
+          showToast('Filesystem error: ' + fsErr.message);
+          return;
         }
         
         try {
-          const { Share } = await import('@capacitor/share');
-          await Share.share({
-            title: 'Graduation Pass',
-            text: 'Here is my Graduation Day 2026 Pass',
-            url: uri,
-            dialogTitle: 'Save or Share Pass'
+          await Media.savePhoto({
+            path: uri
           });
-          showToast('QR Pass opened for sharing/saving!');
-        } catch (shareErr: any) {
-          console.log('Share canceled or failed', shareErr);
-          showToast('Share error: ' + shareErr.message);
+          showToast('QR Pass saved to gallery!');
+        } catch (mediaErr: any) {
+          console.log('Media save failed', mediaErr);
+          showToast('Failed to save to gallery: ' + mediaErr.message);
         }
       } else {
         // Fallback for web

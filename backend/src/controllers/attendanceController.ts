@@ -130,8 +130,9 @@ export class AttendanceController {
    */
   static async reset(req: Request, res: Response) {
     try {
-      const result = await prisma.attendance.deleteMany({});
-      return res.json({ message: `Successfully deleted ${result.count} attendance records.` });
+      const attResult = await prisma.attendance.deleteMany({});
+      const qrResult = await prisma.qrToken.deleteMany({});
+      return res.json({ message: `Successfully deleted ${attResult.count} attendance records and ${qrResult.count} QR tokens.` });
     } catch (err: any) {
       return res.status(500).json({ error: err.message || 'Error resetting attendance.' });
     }
