@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { api } from '../services/api';
-import { ImportPreviewResponse, ImportConfirmResponse } from '../../../shared/types';
+import { ImportPreviewResponse, ImportConfirmResponse } from '../types';
 import { Upload, FileSpreadsheet, CheckCircle2, XCircle, Info, ArrowRight, RefreshCw } from '../components/Icons';
 import { StatusBadge } from '../components/StatusBadge';
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { QRScanner } from '../components/QRScanner';
 import { api } from '../services/api';
-import { ScanResponse } from '../../../shared/types';
+import { ScanResponse } from '../types';
 import { QrCode, ShieldCheck } from '../components/Icons';
 
 export const AdminScanner: React.FC = () => {

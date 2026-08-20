@@ -25,20 +25,34 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health Check Endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', system: 'Graduation Day 2026 System', timestamp: new Date().toISOString() });
+// Health Check & Root Endpoints
+app.get(['/', '/health', '/api/health'], (req, res) => {
+  res.json({
+    status: 'OK',
+    system: 'Graduation Day 2026 System',
+    timestamp: new Date().toISOString(),
+    api: '/api',
+  });
 });
 
-// API root - provide a simple index for the API
-app.get('/api', (req, res) => {
-  res.json({
-    status: 'API running',
-    message: 'Graduation Day 2026 API',
-    endpoints: {
-      health: '/api/health',
-    },
-  });
+// Direct APK Download Endpoint for mobile devices
+app.get(['/download/apk', '/api/download/apk'], (req, res) => {
+  const possiblePaths = [
+    path.resolve(process.cwd(), 'GraduationQR-Scanner.apk'),
+    path.resolve(process.cwd(), '../GraduationQR-Scanner.apk'),
+    path.resolve(__dirname, '../../GraduationQR-Scanner.apk'),
+    path.resolve(__dirname, '../../../GraduationQR-Scanner.apk'),
+    path.resolve(process.cwd(), 'android/app/build/outputs/apk/debug/app-debug.apk'),
+    'C:\\Users\\Amear\\Downloads\\GraduationQR-Scanner.apk',
+  ];
+
+  for (const apkPath of possiblePaths) {
+    if (require('fs').existsSync(apkPath)) {
+      return res.download(apkPath, 'GraduationQR-Scanner.apk');
+    }
+  }
+
+  res.status(404).json({ error: 'APK file not found. Please build it first using npm run build:apk' });
 });
 
 // API Routes

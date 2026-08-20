@@ -1,4 +1,4 @@
-import { ScanStatus } from '../../../shared/types';
+import { ScanStatus } from '../types';
 
 class SoundSynthesizer {
   private ctx: AudioContext | null = null;

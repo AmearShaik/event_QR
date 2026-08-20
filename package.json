@@ -13,6 +13,8 @@
     "dev:frontend": "cd frontend && npm run dev",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "build": "cd backend && npm run build && cd ../frontend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "build:apk": "powershell -ExecutionPolicy Bypass -File ./build-apk.ps1",
     "test": "cd backend && npm test"
   },
   "devDependencies": {

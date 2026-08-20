@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { Camera, Volume2, VolumeX, RefreshCw, CheckCircle2, AlertTriangle, XCircle, ShieldAlert } from './Icons';
-import { ScanResponse } from '../../../shared/types';
+import { ScanResponse } from '../types';
 import { soundSynth } from './AudioFeedback';
 
 interface QRScannerProps {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { api } from '../services/api';
+import { api, getApiBaseUrl, isNativePlatform } from '../services/api';
 import {
   GraduationCap,
   ShieldCheck,
@@ -11,10 +11,15 @@ import {
   Sparkles,
   QrCode,
   KeyRound,
+  Server,
+  Wifi,
+  CheckCircle2,
 } from '../components/Icons';
+import { ServerConfigModal } from '../components/ServerConfigModal';
 
 export const LoginPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'STUDENT' | 'ADMIN'>('STUDENT');
+  const [showServerModal, setShowServerModal] = useState<boolean>(false);
 
   // Student State - Initialized completely empty
   const [studentId, setStudentId] = useState<string>('');
@@ -30,6 +35,10 @@ export const LoginPage: React.FC = () => {
 
   const { loginStudent, loginAdmin } = useAuth();
   const navigate = useNavigate();
+
+  const isMobileApp = isNativePlatform();
+  const isCustomServer = api.isCustomServerSet();
+  const currentBase = getApiBaseUrl();
 
   const handleStudentLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,6 +85,12 @@ export const LoginPage: React.FC = () => {
     }
   };
 
+  const isNetworkError = (msg: string | null) => {
+    if (!msg) return false;
+    const lower = msg.toLowerCase();
+    return lower.includes('cannot reach') || lower.includes('cannot connect') || lower.includes('failed to fetch') || lower.includes('network') || lower.includes('server url');
+  };
+
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-gradient-to-b from-slate-900 via-slate-900 to-indigo-950">
       <div className="w-full max-w-xl mx-auto space-y-6">
@@ -92,6 +107,24 @@ export const LoginPage: React.FC = () => {
             Please log in with your credentials to access your entrance QR pass or administrative controls.
           </p>
         </div>
+
+        {/* Mobile Server Notice Banner (if unconfigured on native app) */}
+        {isMobileApp && !isCustomServer && (
+          <div
+            onClick={() => setShowServerModal(true)}
+            className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center justify-between gap-3 cursor-pointer hover:bg-amber-500/15 transition-all shadow-lg animate-in fade-in"
+          >
+            <div className="flex items-center gap-2.5">
+              <Wifi className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>
+                <strong>Mobile App:</strong> Connect to backend (e.g. <code className="text-white">http://192.168.1.19:5000</code>).
+              </span>
+            </div>
+            <span className="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-200 text-[11px] font-bold shrink-0">
+              Setup IP
+            </span>
+          </div>
+        )}
 
         {/* Glassmorphic Portal Container */}
         <div className="bg-slate-800/80 backdrop-blur-xl border border-slate-700/80 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
@@ -174,12 +207,24 @@ export const LoginPage: React.FC = () => {
               </div>
 
               {studentError && (
-                <div className="bg-rose-500/10 border border-rose-500/30 text-rose-300 rounded-2xl p-4 text-xs font-medium flex items-start gap-3 animate-in fade-in duration-200">
-                  <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <p className="font-bold text-rose-200 text-sm">Authentication Notice</p>
-                    <p className="leading-relaxed">{studentError}</p>
+                <div className="bg-rose-500/10 border border-rose-500/30 text-rose-300 rounded-2xl p-4 text-xs font-medium space-y-3 animate-in fade-in duration-200">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <p className="font-bold text-rose-200 text-sm">Authentication Notice</p>
+                      <p className="leading-relaxed">{studentError}</p>
+                    </div>
                   </div>
+                  {isNetworkError(studentError) && (
+                    <button
+                      type="button"
+                      onClick={() => setShowServerModal(true)}
+                      className="w-full py-2 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 font-semibold text-xs border border-rose-500/30 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Server className="w-3.5 h-3.5" />
+                      <span>Configure Backend Server URL</span>
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -245,12 +290,24 @@ export const LoginPage: React.FC = () => {
               </div>
 
               {adminError && (
-                <div className="bg-rose-500/10 border border-rose-500/30 text-rose-300 rounded-2xl p-4 text-xs font-medium flex items-start gap-3 animate-in fade-in duration-200">
-                  <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <p className="font-bold text-rose-200 text-sm">Login Failed</p>
-                    <p className="leading-relaxed">{adminError}</p>
+                <div className="bg-rose-500/10 border border-rose-500/30 text-rose-300 rounded-2xl p-4 text-xs font-medium space-y-3 animate-in fade-in duration-200">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <p className="font-bold text-rose-200 text-sm">Login Failed</p>
+                      <p className="leading-relaxed">{adminError}</p>
+                    </div>
                   </div>
+                  {isNetworkError(adminError) && (
+                    <button
+                      type="button"
+                      onClick={() => setShowServerModal(true)}
+                      className="w-full py-2 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 font-semibold text-xs border border-rose-500/30 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Server className="w-3.5 h-3.5" />
+                      <span>Configure Backend Server URL</span>
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -270,8 +327,31 @@ export const LoginPage: React.FC = () => {
               </button>
             </form>
           )}
+
+          {/* Server Connection Status Footer */}
+          <div className="pt-3 border-t border-slate-700/50 flex items-center justify-between text-xs text-slate-400">
+            <div className="flex items-center gap-1.5 truncate max-w-[240px]">
+              <span className={`w-2 h-2 rounded-full ${isCustomServer ? 'bg-emerald-400' : 'bg-slate-500'}`} />
+              <span className="truncate text-[11px] font-mono text-slate-400" title={currentBase}>
+                {currentBase}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowServerModal(true)}
+              className="inline-flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 py-1 px-2.5 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 transition-colors cursor-pointer border border-slate-700"
+            >
+              <Server className="w-3.5 h-3.5" />
+              <span>Change Server</span>
+            </button>
+          </div>
         </div>
       </div>
+
+      <ServerConfigModal
+        isOpen={showServerModal}
+        onClose={() => setShowServerModal(false)}
+      />
     </div>
   );
 };

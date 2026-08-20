@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { UserDto } from '../../../shared/types';
+import { UserDto } from '../types';
 import { api } from '../services/api';
 
 export interface StudentSession {

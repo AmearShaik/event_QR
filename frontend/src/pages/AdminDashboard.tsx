@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
-import { DashboardStats } from '../../../shared/types';
+import { DashboardStats } from '../types';
 import {
   Users,
   CheckCircle2,
