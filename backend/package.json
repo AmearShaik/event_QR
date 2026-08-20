@@ -2,11 +2,11 @@
   "name": "graduation-day-backend",
   "version": "1.0.0",
   "private": true,
-  "main": "dist/server.js",
+  "main": "dist/backend/src/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "prisma generate && tsc",
-    "start": "node dist/server.js",
+    "start": "node dist/backend/src/server.js",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "seed:admin": "node prisma/seedAdmin.js",
