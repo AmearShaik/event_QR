@@ -20,13 +20,23 @@ interface QRCardProps {
 export const QRCard: React.FC<QRCardProps> = ({ candidate, event, token }) => {
   const svgContainerRef = useRef<HTMLDivElement>(null);
 
+  const [toastMessage, setToastMessage] = React.useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
   const handleDownload = async () => {
     try {
+      const scale = 2; // 2x resolution for crispness
       const canvas = document.createElement('canvas');
-      canvas.width = 600;
-      canvas.height = 750;
+      canvas.width = 600 * scale;
+      canvas.height = 750 * scale;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
+
+      ctx.scale(scale, scale);
 
       // Background Gradient
       const grad = ctx.createLinearGradient(0, 0, 600, 750);
@@ -113,25 +123,31 @@ export const QRCard: React.FC<QRCardProps> = ({ candidate, event, token }) => {
       ctx.font = '12px sans-serif';
       ctx.fillText('Present this pass at the gate scanner for entrance verification.', 300, 685);
 
-      const dataUrl = canvas.toDataURL('image/png');
+      const dataUrl = canvas.toDataURL('image/png', 1.0);
 
       if (api.isNative()) {
         const { Filesystem, Directory } = await import('@capacitor/filesystem');
-        const { Share } = await import('@capacitor/share');
         
         const fileName = `Graduation-Pass-${candidate.studentId}.png`;
         const result = await Filesystem.writeFile({
           path: fileName,
           data: dataUrl.split(',')[1],
-          directory: Directory.Cache
+          directory: Directory.Documents
         });
-
-        await Share.share({
-          title: 'Graduation Pass',
-          text: 'Here is my Graduation Day 2026 Pass',
-          url: result.uri,
-          dialogTitle: 'Save or Share Pass'
-        });
+        
+        showToast('QR Pass saved to Documents folder!');
+        
+        try {
+          const { Share } = await import('@capacitor/share');
+          await Share.share({
+            title: 'Graduation Pass',
+            text: 'Here is my Graduation Day 2026 Pass',
+            url: result.uri,
+            dialogTitle: 'Save or Share Pass'
+          });
+        } catch (shareErr) {
+          console.log('Share canceled or failed', shareErr);
+        }
       } else {
         // Fallback for web
         const link = document.createElement('a');
@@ -140,9 +156,11 @@ export const QRCard: React.FC<QRCardProps> = ({ candidate, event, token }) => {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        showToast('QR Pass downloaded successfully!');
       }
     } catch (err) {
       console.error('PNG export error', err);
+      showToast('Error saving QR Pass.');
     }
   };
 
@@ -219,6 +237,14 @@ export const QRCard: React.FC<QRCardProps> = ({ candidate, event, token }) => {
         <Download className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" />
         Download QR Card (PNG)
       </button>
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-slate-800 text-white px-6 py-3 rounded-2xl border border-emerald-500/30 shadow-2xl shadow-emerald-500/20 flex items-center gap-3 animate-in fade-in slide-in-from-top-5">
+          <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+          <span className="font-semibold text-sm">{toastMessage}</span>
+        </div>
+      )}
     </div>
   );
 };
