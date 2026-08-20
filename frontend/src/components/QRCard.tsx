@@ -144,8 +144,28 @@ export const QRCard: React.FC<QRCardProps> = ({ candidate, event, token }) => {
         }
         
         try {
+          // Android requires an album identifier.
+          let albumIdentifier;
+          try {
+            const { albums } = await Media.getAlbums();
+            let album = albums.find(a => a.name === 'Pictures' || a.name === 'Downloads');
+            if (!album) {
+              await Media.createAlbum({ name: 'Pictures' }).catch(() => {});
+              const { albums: newAlbums } = await Media.getAlbums();
+              album = newAlbums.find(a => a.name === 'Pictures');
+            }
+            if (album) {
+              albumIdentifier = album.identifier;
+            } else if (albums.length > 0) {
+              albumIdentifier = albums[0].identifier;
+            }
+          } catch (e) {
+            console.warn("Failed to get/create album", e);
+          }
+
           await Media.savePhoto({
-            path: uri
+            path: uri,
+            ...(albumIdentifier ? { albumIdentifier } : {})
           });
           showToast('QR Pass saved to gallery!');
         } catch (mediaErr: any) {
