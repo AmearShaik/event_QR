@@ -258,7 +258,8 @@ export const api = {
     const res = await safeFetch(`${getApiBaseUrl()}/admin/import/history`, {
       headers: { ...getAuthHeader() },
     });
-    return handleResponse(res, 'Failed to fetch import logs');
+    const data = await handleResponse(res, 'Failed to fetch import logs');
+    return data.logs || [];
   },
 
   // Gate Scanner
