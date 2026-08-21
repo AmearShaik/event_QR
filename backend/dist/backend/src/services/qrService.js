@@ -23,36 +23,27 @@ class QrService {
         const candidate = await prisma.candidate.findUnique({
             where: { id: candidateId },
         });
-        if (!candidate || !candidate.eligibilityStatus || candidate.normalizedPaymentStatus !== 'PAID') {
-            throw new Error('Candidate is not eligible for QR generation');
+        if (!candidate) {
+            throw new Error('Candidate not found');
         }
-        // Check if an active token already exists for candidate + event
-        const existingToken = await prisma.qrToken.findFirst({
-            where: {
-                candidateId,
-                eventId,
-                isActive: true,
-            },
-        });
-        if (existingToken) {
-            return existingToken.token;
-        }
-        // Deactivate any old tokens for this candidate/event to ensure exactly ONE active token
-        await prisma.qrToken.updateMany({
-            where: { candidateId, eventId },
-            data: { isActive: false },
-        });
-        // Create new secure token
+        // Use upsert to guarantee exactly ONE active token atomically
         const tokenStr = this.generateSecureToken();
-        const newToken = await prisma.qrToken.create({
-            data: {
+        const token = await prisma.qrToken.upsert({
+            where: {
+                candidateId_eventId: {
+                    candidateId,
+                    eventId,
+                },
+            },
+            update: {}, // Do not modify existing active tokens
+            create: {
                 candidateId,
                 eventId,
                 token: tokenStr,
                 isActive: true,
             },
         });
-        return newToken.token;
+        return token.token;
     }
 }
 exports.QrService = QrService;

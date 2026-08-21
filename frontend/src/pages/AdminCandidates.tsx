@@ -78,6 +78,12 @@ export const AdminCandidates: React.FC = () => {
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
+              // Clear other filters so search applies globally across all data
+              setProgram('');
+              setPaymentStatus('');
+              setEligibility('');
+              setAttendance('');
+              setQrGenerated('');
               setPage(1);
             }}
             placeholder="Search ID, Name, Program..."

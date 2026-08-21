@@ -67,43 +67,7 @@ class AttendanceService {
                 message: 'Candidate record not found.',
             };
         }
-        // Step 6: Payment & Eligibility Check (Fresh backend check)
-        if (candidate.normalizedPaymentStatus === 'NOT_PAID') {
-            return {
-                status: 'NOT_ELIGIBLE',
-                reason: 'NOT_PAID',
-                message: 'Payment status: Not Paid.',
-                candidate: {
-                    studentId: candidate.studentId,
-                    name: candidate.name,
-                    program: candidate.program,
-                },
-            };
-        }
-        if (candidate.normalizedPaymentStatus === 'PARTIALLY_PAID') {
-            return {
-                status: 'NOT_ELIGIBLE',
-                reason: 'PARTIALLY_PAID',
-                message: 'Payment status: Partially Paid.',
-                candidate: {
-                    studentId: candidate.studentId,
-                    name: candidate.name,
-                    program: candidate.program,
-                },
-            };
-        }
-        if (!candidate.eligibilityStatus || candidate.normalizedPaymentStatus !== 'PAID') {
-            return {
-                status: 'NOT_ELIGIBLE',
-                reason: 'NOT_ELIGIBLE',
-                message: 'Candidate is not eligible for entrance.',
-                candidate: {
-                    studentId: candidate.studentId,
-                    name: candidate.name,
-                    program: candidate.program,
-                },
-            };
-        }
+        // Removed payment and eligibility checks to allow all students to enter.
         // Step 7: Duplicate check before insertion
         const existingAttendance = await prisma.attendance.findUnique({
             where: {

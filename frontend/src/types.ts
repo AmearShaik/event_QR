@@ -124,6 +124,8 @@ export interface DashboardStats {
   notEligibleCandidates: number;
   qrGeneratedCount: number;
   attendanceCount: number;
+  attendedPaidCount: number;
+  attendedNotPaidCount: number;
   remainingEligible: number;
   attendanceRate: number;
 }

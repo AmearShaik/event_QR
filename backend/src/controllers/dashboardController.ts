@@ -18,6 +18,8 @@ export class DashboardController {
         notEligibleCandidates,
         qrGeneratedCount,
         attendanceCount,
+        attendedPaidCount,
+        attendedNotPaidCount,
         programBreakdown,
       ] = await Promise.all([
         prisma.candidate.count(),
@@ -30,6 +32,12 @@ export class DashboardController {
         activeEventId
           ? prisma.attendance.count({ where: { eventId: activeEventId } })
           : prisma.attendance.count(),
+        activeEventId
+          ? prisma.attendance.count({ where: { eventId: activeEventId, candidate: { normalizedPaymentStatus: 'PAID' } } })
+          : prisma.attendance.count({ where: { candidate: { normalizedPaymentStatus: 'PAID' } } }),
+        activeEventId
+          ? prisma.attendance.count({ where: { eventId: activeEventId, candidate: { normalizedPaymentStatus: { in: ['NOT_PAID', 'PARTIALLY_PAID'] } } } })
+          : prisma.attendance.count({ where: { candidate: { normalizedPaymentStatus: { in: ['NOT_PAID', 'PARTIALLY_PAID'] } } } }),
         prisma.candidate.groupBy({
           by: ['program'],
           _count: { id: true },
@@ -48,6 +56,8 @@ export class DashboardController {
         notEligibleCandidates,
         qrGeneratedCount,
         attendanceCount,
+        attendedPaidCount,
+        attendedNotPaidCount,
         remainingEligible,
         attendanceRate: parseFloat(attendanceRate.toFixed(2)),
         activeEvent: activeEvent ? { id: activeEvent.id, name: activeEvent.name } : null,

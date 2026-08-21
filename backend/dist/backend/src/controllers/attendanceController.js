@@ -10,8 +10,9 @@ class AttendanceController {
      */
     static async scan(req, res) {
         try {
-            const { token, eventId } = req.body;
-            if (!token) {
+            const { token, qrToken, eventId } = req.body;
+            const actualToken = token || qrToken;
+            if (!actualToken) {
                 return res.status(400).json({ status: 'INVALID', message: 'QR token is required.' });
             }
             // Default event fallback if eventId not specified
@@ -20,7 +21,7 @@ class AttendanceController {
                 const activeEvent = await prisma.event.findFirst({ where: { isActive: true } });
                 targetEventId = activeEvent ? activeEvent.id : 'attendance';
             }
-            const result = await attendanceService_1.AttendanceService.scanQrToken(token, targetEventId);
+            const result = await attendanceService_1.AttendanceService.scanQrToken(actualToken, targetEventId);
             return res.json(result);
         }
         catch (err) {
@@ -112,6 +113,19 @@ class AttendanceController {
         }
         catch (err) {
             return res.status(500).json({ error: err.message || 'CSV export error' });
+        }
+    }
+    /**
+     * Endpoint: DELETE /api/attendance/reset
+     */
+    static async reset(req, res) {
+        try {
+            const attResult = await prisma.attendance.deleteMany({});
+            const qrResult = await prisma.qrToken.deleteMany({});
+            return res.json({ message: `Successfully deleted ${attResult.count} attendance records and ${qrResult.count} QR tokens.` });
+        }
+        catch (err) {
+            return res.status(500).json({ error: err.message || 'Error resetting attendance.' });
         }
     }
 }

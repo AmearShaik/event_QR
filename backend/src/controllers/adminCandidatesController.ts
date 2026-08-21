@@ -26,9 +26,9 @@ export class AdminCandidatesController {
       if (search && typeof search === 'string') {
         const query = search.trim();
         where.OR = [
-          { studentId: { contains: query } },
-          { name: { contains: query } },
-          { program: { contains: query } },
+          { studentId: { contains: query, mode: 'insensitive' } },
+          { name: { contains: query, mode: 'insensitive' } },
+          { program: { contains: query, mode: 'insensitive' } },
         ];
       }
 

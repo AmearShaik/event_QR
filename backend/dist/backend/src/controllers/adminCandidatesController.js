@@ -6,7 +6,7 @@ const prisma = new client_1.PrismaClient();
 class AdminCandidatesController {
     static async listCandidates(req, res) {
         try {
-            const { search, program, paymentStatus, eligibility, attendance, page = '1', limit = '50', } = req.query;
+            const { search, program, paymentStatus, eligibility, attendance, qrGenerated, page = '1', limit = '50', } = req.query;
             const pageNum = parseInt(page, 10) || 1;
             const limitNum = parseInt(limit, 10) || 50;
             const skip = (pageNum - 1) * limitNum;
@@ -14,9 +14,9 @@ class AdminCandidatesController {
             if (search && typeof search === 'string') {
                 const query = search.trim();
                 where.OR = [
-                    { studentId: { contains: query } },
-                    { name: { contains: query } },
-                    { program: { contains: query } },
+                    { studentId: { contains: query, mode: 'insensitive' } },
+                    { name: { contains: query, mode: 'insensitive' } },
+                    { program: { contains: query, mode: 'insensitive' } },
                 ];
             }
             if (program && typeof program === 'string') {
@@ -35,6 +35,15 @@ class AdminCandidatesController {
                 }
                 else {
                     where.attendances = { none: {} };
+                }
+            }
+            if (qrGenerated !== undefined && qrGenerated !== '') {
+                const generated = qrGenerated === 'true';
+                if (generated) {
+                    where.qrTokens = { some: { isActive: true } };
+                }
+                else {
+                    where.qrTokens = { none: { isActive: true } };
                 }
             }
             const [totalCount, candidates] = await Promise.all([

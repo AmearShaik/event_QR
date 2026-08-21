@@ -20,7 +20,6 @@ export const AdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState<boolean>(false);
-  const [resetting, setResetting] = useState<boolean>(false);
 
   const handleExportCSV = async () => {
     setExporting(true);
@@ -41,21 +40,7 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleResetAttendance = async () => {
-    if (!window.confirm('Are you sure you want to clear ALL attendance records? This action cannot be undone and is intended for test data cleanup only.')) {
-      return;
-    }
-    setResetting(true);
-    try {
-      await api.resetAttendance();
-      alert('Attendance records cleared successfully.');
-      fetchStats();
-    } catch (err: any) {
-      alert(err.message || 'Failed to clear attendance records');
-    } finally {
-      setResetting(false);
-    }
-  };
+
 
   const fetchStats = async () => {
     setLoading(true);
@@ -109,18 +94,7 @@ export const AdminDashboard: React.FC = () => {
           </p>
         </div>
         <div className="flex gap-3">
-          <button
-            onClick={handleResetAttendance}
-            disabled={resetting}
-            className="flex items-center gap-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/50 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer disabled:opacity-50"
-          >
-            {resetting ? (
-              <RefreshCw className="w-4 h-4 animate-spin" />
-            ) : (
-              <XCircle className="w-4 h-4" />
-            )}
-            Clear Attendance
-          </button>
+
           <button
             onClick={handleExportCSV}
             disabled={exporting}
@@ -143,7 +117,7 @@ export const AdminDashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         <div 
           onClick={() => navigate('/candidates')}
           className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 space-y-2 cursor-pointer hover:bg-slate-700/80 transition-colors"
@@ -193,16 +167,30 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         <div 
-          onClick={() => navigate('/candidates?attendance=true')}
-          className="bg-slate-800/80 border border-amber-500/30 rounded-2xl p-4 space-y-2 col-span-2 sm:col-span-1 cursor-pointer hover:bg-slate-700/80 transition-colors"
+          onClick={() => navigate('/candidates?attendance=true&paymentStatus=PAID')}
+          className="bg-slate-800/80 border border-amber-500/30 rounded-2xl p-4 space-y-2 cursor-pointer hover:bg-slate-700/80 transition-colors"
         >
           <div className="flex items-center justify-between text-amber-400">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Attended</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider">Attended (Paid)</span>
             <UserCheck className="w-4 h-4" />
           </div>
-          <p className="text-2xl sm:text-3xl font-black text-amber-300">{stats.attendanceCount.toLocaleString()}</p>
+          <p className="text-2xl sm:text-3xl font-black text-amber-300">{stats.attendedPaidCount.toLocaleString()}</p>
           <span className="text-[10px] text-amber-400/80 block">
-            {stats.remainingEligible} Remaining Eligible
+            Payment = PAID
+          </span>
+        </div>
+
+        <div 
+          onClick={() => navigate('/candidates?attendance=true&paymentStatus=NOT_PAID')}
+          className="bg-slate-800/80 border border-rose-500/30 rounded-2xl p-4 space-y-2 cursor-pointer hover:bg-slate-700/80 transition-colors"
+        >
+          <div className="flex items-center justify-between text-rose-400">
+            <span className="text-[11px] font-bold uppercase tracking-wider">Attended (Not Paid)</span>
+            <UserCheck className="w-4 h-4" />
+          </div>
+          <p className="text-2xl sm:text-3xl font-black text-rose-400">{stats.attendedNotPaidCount.toLocaleString()}</p>
+          <span className="text-[10px] text-rose-400/80 block">
+            Not Paid / Partial
           </span>
         </div>
       </div>
