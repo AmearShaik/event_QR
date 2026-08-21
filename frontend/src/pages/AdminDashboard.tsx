@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { DashboardStats } from '../types';
 import {
@@ -14,6 +15,7 @@ import {
 } from '../components/Icons';
 
 export const AdminDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<(DashboardStats & { programBreakdown: any[] }) | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -142,7 +144,10 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        <div className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 space-y-2">
+        <div 
+          onClick={() => navigate('/candidates')}
+          className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 space-y-2 cursor-pointer hover:bg-slate-700/80 transition-colors"
+        >
           <div className="flex items-center justify-between text-slate-400">
             <span className="text-[11px] font-bold uppercase tracking-wider">Total Candidates</span>
             <Users className="w-4 h-4 text-slate-400" />
@@ -151,7 +156,10 @@ export const AdminDashboard: React.FC = () => {
           <span className="text-[10px] text-slate-500 block">Master File Source</span>
         </div>
 
-        <div className="bg-slate-800/80 border border-emerald-500/30 rounded-2xl p-4 space-y-2">
+        <div 
+          onClick={() => navigate('/candidates?eligibility=true')}
+          className="bg-slate-800/80 border border-emerald-500/30 rounded-2xl p-4 space-y-2 cursor-pointer hover:bg-slate-700/80 transition-colors"
+        >
           <div className="flex items-center justify-between text-emerald-400">
             <span className="text-[11px] font-bold uppercase tracking-wider">Eligible</span>
             <CheckCircle2 className="w-4 h-4" />
@@ -160,7 +168,10 @@ export const AdminDashboard: React.FC = () => {
           <span className="text-[10px] text-emerald-500/80 block">Payment = PAID</span>
         </div>
 
-        <div className="bg-slate-800/80 border border-rose-500/30 rounded-2xl p-4 space-y-2">
+        <div 
+          onClick={() => navigate('/candidates?eligibility=false')}
+          className="bg-slate-800/80 border border-rose-500/30 rounded-2xl p-4 space-y-2 cursor-pointer hover:bg-slate-700/80 transition-colors"
+        >
           <div className="flex items-center justify-between text-rose-400">
             <span className="text-[11px] font-bold uppercase tracking-wider">Not Eligible</span>
             <XCircle className="w-4 h-4" />
@@ -169,7 +180,10 @@ export const AdminDashboard: React.FC = () => {
           <span className="text-[10px] text-rose-500/80 block">Not Paid / Partial</span>
         </div>
 
-        <div className="bg-slate-800/80 border border-indigo-500/30 rounded-2xl p-4 space-y-2">
+        <div 
+          onClick={() => navigate('/candidates?qrGenerated=true')}
+          className="bg-slate-800/80 border border-indigo-500/30 rounded-2xl p-4 space-y-2 cursor-pointer hover:bg-slate-700/80 transition-colors"
+        >
           <div className="flex items-center justify-between text-indigo-400">
             <span className="text-[11px] font-bold uppercase tracking-wider">QR Generated</span>
             <QrCode className="w-4 h-4" />
@@ -178,7 +192,10 @@ export const AdminDashboard: React.FC = () => {
           <span className="text-[10px] text-indigo-400/80 block">Active QR Tokens</span>
         </div>
 
-        <div className="bg-slate-800/80 border border-amber-500/30 rounded-2xl p-4 space-y-2 col-span-2 sm:col-span-1">
+        <div 
+          onClick={() => navigate('/candidates?attendance=true')}
+          className="bg-slate-800/80 border border-amber-500/30 rounded-2xl p-4 space-y-2 col-span-2 sm:col-span-1 cursor-pointer hover:bg-slate-700/80 transition-colors"
+        >
           <div className="flex items-center justify-between text-amber-400">
             <span className="text-[11px] font-bold uppercase tracking-wider">Attended</span>
             <UserCheck className="w-4 h-4" />

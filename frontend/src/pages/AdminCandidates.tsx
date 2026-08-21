@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { api } from '../services/api';
 import { StatusBadge } from '../components/StatusBadge';
 import { Search, Filter, RefreshCw, ChevronLeft, ChevronRight, Users } from '../components/Icons';
@@ -8,12 +9,16 @@ export const AdminCandidates: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [search, setSearch] = useState<string>('');
-  const [program, setProgram] = useState<string>('');
-  const [paymentStatus, setPaymentStatus] = useState<string>('');
-  const [eligibility, setEligibility] = useState<string>('');
-  const [attendance, setAttendance] = useState<string>('');
-  const [page, setPage] = useState<number>(1);
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+
+  const [search, setSearch] = useState<string>(searchParams.get('search') || '');
+  const [program, setProgram] = useState<string>(searchParams.get('program') || '');
+  const [paymentStatus, setPaymentStatus] = useState<string>(searchParams.get('paymentStatus') || '');
+  const [eligibility, setEligibility] = useState<string>(searchParams.get('eligibility') || '');
+  const [attendance, setAttendance] = useState<string>(searchParams.get('attendance') || '');
+  const [qrGenerated, setQrGenerated] = useState<string>(searchParams.get('qrGenerated') || '');
+  const [page, setPage] = useState<number>(parseInt(searchParams.get('page') || '1', 10));
   const [pagination, setPagination] = useState<{ total: number; totalPages: number }>({ total: 0, totalPages: 1 });
 
   const fetchCandidates = async () => {
@@ -29,6 +34,7 @@ export const AdminCandidates: React.FC = () => {
       if (paymentStatus) params.paymentStatus = paymentStatus;
       if (eligibility) params.eligibility = eligibility;
       if (attendance) params.attendance = attendance;
+      if (qrGenerated) params.qrGenerated = qrGenerated;
 
       const res = await api.getCandidates(params);
       setCandidates(res.candidates);
@@ -42,7 +48,7 @@ export const AdminCandidates: React.FC = () => {
 
   useEffect(() => {
     fetchCandidates();
-  }, [page, search, program, paymentStatus, eligibility, attendance]);
+  }, [page, search, program, paymentStatus, eligibility, attendance, qrGenerated]);
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
@@ -120,6 +126,19 @@ export const AdminCandidates: React.FC = () => {
           <option value="false">Not Attended</option>
         </select>
 
+        <select
+          value={qrGenerated}
+          onChange={(e) => {
+            setQrGenerated(e.target.value);
+            setPage(1);
+          }}
+          className="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+        >
+          <option value="">All QR Statuses</option>
+          <option value="true">QR Generated</option>
+          <option value="false">No QR</option>
+        </select>
+
         <button
           onClick={() => {
             setSearch('');
@@ -127,6 +146,7 @@ export const AdminCandidates: React.FC = () => {
             setPaymentStatus('');
             setEligibility('');
             setAttendance('');
+            setQrGenerated('');
             setPage(1);
           }}
           className="bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-semibold py-2.5 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"

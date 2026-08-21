@@ -12,6 +12,7 @@ export class AdminCandidatesController {
         paymentStatus,
         eligibility,
         attendance,
+        qrGenerated,
         page = '1',
         limit = '50',
       } = req.query;
@@ -49,6 +50,15 @@ export class AdminCandidatesController {
           where.attendances = { some: {} };
         } else {
           where.attendances = { none: {} };
+        }
+      }
+
+      if (qrGenerated !== undefined && qrGenerated !== '') {
+        const generated = qrGenerated === 'true';
+        if (generated) {
+          where.qrTokens = { some: { isActive: true } };
+        } else {
+          where.qrTokens = { none: { isActive: true } };
         }
       }
 
