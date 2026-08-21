@@ -21,8 +21,8 @@ export class QrService {
       where: { id: candidateId },
     });
 
-    if (!candidate || !candidate.eligibilityStatus || candidate.normalizedPaymentStatus !== 'PAID') {
-      throw new Error('Candidate is not eligible for QR generation');
+    if (!candidate) {
+      throw new Error('Candidate not found');
     }
 
     // Check if an active token already exists for candidate + event

@@ -28,47 +28,8 @@ export class CandidateController {
         });
       }
 
-      if (candidate.normalizedPaymentStatus === 'NOT_PAID') {
-        return res.status(200).json({
-          eligible: false,
-          status: 'NOT_ELIGIBLE_NOT_PAID',
-          message: 'You are currently not eligible for Graduation Day entrance based on the official payment status. Please contact the administration if you believe this is incorrect.',
-          candidate: {
-            studentId: candidate.studentId,
-            name: candidate.name,
-            program: candidate.program,
-            paymentStatus: candidate.paymentStatus,
-          },
-        });
-      }
+      // Removed payment and eligibility checks to allow all students.
 
-      if (candidate.normalizedPaymentStatus === 'PARTIALLY_PAID') {
-        return res.status(200).json({
-          eligible: false,
-          status: 'NOT_ELIGIBLE_PARTIALLY_PAID',
-          message: 'Your payment status is partially paid. You are currently not eligible for entrance. Please contact the administration.',
-          candidate: {
-            studentId: candidate.studentId,
-            name: candidate.name,
-            program: candidate.program,
-            paymentStatus: candidate.paymentStatus,
-          },
-        });
-      }
-
-      if (!candidate.eligibilityStatus || candidate.normalizedPaymentStatus !== 'PAID') {
-        return res.status(200).json({
-          eligible: false,
-          status: 'NOT_ELIGIBLE',
-          message: 'You are currently not eligible for Graduation Day entrance.',
-          candidate: {
-            studentId: candidate.studentId,
-            name: candidate.name,
-            program: candidate.program,
-            paymentStatus: candidate.paymentStatus,
-          },
-        });
-      }
 
       return res.json({
         eligible: true,
@@ -110,11 +71,7 @@ export class CandidateController {
         });
       }
 
-      if (candidate.normalizedPaymentStatus !== 'PAID' || !candidate.eligibilityStatus) {
-        return res.status(403).json({
-          error: 'You are currently not eligible for entrance based on official payment status.',
-        });
-      }
+      // Removed payment and eligibility checks to allow all students.
 
       // Find active event
       let event = await prisma.event.findFirst({
@@ -196,21 +153,7 @@ export class CandidateController {
         });
       }
 
-      if (candidate.normalizedPaymentStatus !== 'PAID' || !candidate.eligibilityStatus) {
-        return res.status(200).json({
-          eligible: false,
-          status: 'NOT_ELIGIBLE',
-          message: `Student ${candidate.name} (${candidate.studentId}) is currently not eligible for entrance. Payment Status: ${candidate.paymentStatus}.`,
-          candidate: {
-            id: candidate.id,
-            studentId: candidate.studentId,
-            name: candidate.name,
-            program: candidate.program,
-            paymentStatus: candidate.paymentStatus,
-            eligibilityStatus: candidate.eligibilityStatus,
-          },
-        });
-      }
+      // Removed payment and eligibility checks to allow all students.
 
       // Active Event lookup
       let activeEvent = await prisma.event.findFirst({ where: { isActive: true } });
@@ -282,8 +225,8 @@ export class CandidateController {
         where: { studentId: studentId.trim() },
       });
 
-      if (!candidate || candidate.normalizedPaymentStatus !== 'PAID' || !candidate.eligibilityStatus) {
-        return res.status(403).json({ error: 'Candidate is not eligible or not found.' });
+      if (!candidate) {
+        return res.status(404).json({ error: 'Candidate not found.' });
       }
 
       const activeEvent = await prisma.event.findFirst({ where: { isActive: true } });

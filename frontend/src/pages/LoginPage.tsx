@@ -210,16 +210,6 @@ export const LoginPage: React.FC = () => {
                       <p className="leading-relaxed">{studentError}</p>
                     </div>
                   </div>
-                  {isNetworkError(studentError) && (
-                    <button
-                      type="button"
-                      onClick={() => setShowServerModal(true)}
-                      className="w-full py-2 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 font-semibold text-xs border border-rose-500/30 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <Server className="w-3.5 h-3.5" />
-                      <span>Configure Backend Server URL</span>
-                    </button>
-                  )}
                 </div>
               )}
 
@@ -300,16 +290,6 @@ export const LoginPage: React.FC = () => {
                       <p className="leading-relaxed">{adminError}</p>
                     </div>
                   </div>
-                  {isNetworkError(adminError) && (
-                    <button
-                      type="button"
-                      onClick={() => setShowServerModal(true)}
-                      className="w-full py-2 px-3 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 font-semibold text-xs border border-rose-500/30 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <Server className="w-3.5 h-3.5" />
-                      <span>Configure Backend Server URL</span>
-                    </button>
-                  )}
                 </div>
               )}
 
