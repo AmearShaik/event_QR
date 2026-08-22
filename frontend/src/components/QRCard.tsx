@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import html2canvas from 'html2canvas';
 import { Download, CheckCircle2, GraduationCap, ShieldCheck } from './Icons';
 import { StatusBadge } from './StatusBadge';
 import { Filesystem, Directory } from '@capacitor/filesystem';
@@ -20,7 +21,7 @@ interface QRCardProps {
 }
 
 export const QRCard: React.FC<QRCardProps> = ({ candidate, event, token }) => {
-  const svgContainerRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [downloading, setDownloading] = useState<boolean>(false);
 
@@ -35,136 +36,39 @@ export const QRCard: React.FC<QRCardProps> = ({ candidate, event, token }) => {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  const generatePassCanvas = async (): Promise<HTMLCanvasElement | null> => {
-    const scale = 2; // High resolution 2x
-    const canvas = document.createElement('canvas');
-    canvas.width = 600 * scale;
-    canvas.height = 780 * scale;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
-
-    ctx.scale(scale, scale);
-
-    // 1. Background
-    const grad = ctx.createLinearGradient(0, 0, 600, 780);
-    grad.addColorStop(0, '#0f172a');
-    grad.addColorStop(0.5, '#1e293b');
-    grad.addColorStop(1, '#0f172a');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 600, 780);
-
-    // 2. Border
-    ctx.strokeStyle = '#10b981';
-    ctx.lineWidth = 4;
-    ctx.strokeRect(10, 10, 580, 760);
-
-    // 3. Header
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 24px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(collegeName.toUpperCase(), 300, 50);
-
-    ctx.fillStyle = '#10b981';
-    ctx.font = 'bold 18px sans-serif';
-    ctx.fillText('GRADUATION DAY 2026', 300, 80);
-
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '14px sans-serif';
-    ctx.fillText(event.name || 'Official Entrance & Ceremony Pass', 300, 105);
-
-    // 4. Divider line
-    ctx.strokeStyle = '#334155';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(40, 120);
-    ctx.lineTo(560, 120);
-    ctx.stroke();
-
-    // 5. Candidate Name
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '12px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('CANDIDATE NAME', 50, 145);
-
-    ctx.fillStyle = '#6ee7b7';
-    ctx.font = 'bold 22px sans-serif';
-    ctx.fillText(candidate.name, 50, 175);
-
-    // 6. Student ID & Program
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '12px sans-serif';
-    ctx.fillText('ROLL NUMBER / USER ID', 50, 210);
-    ctx.fillText('BRANCH / PROGRAM', 320, 210);
-
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 16px monospace';
-    ctx.fillText(candidate.studentId, 50, 235);
-
-    ctx.font = 'bold 15px sans-serif';
-    ctx.fillText(candidate.program, 320, 235);
-
-    // 7. QR Code from SVG
-    const svgEl = svgContainerRef.current?.querySelector('svg');
-    if (!svgEl) return null;
-
-    return new Promise((resolve) => {
-      const svgData = new XMLSerializer().serializeToString(svgEl);
-      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-      const URLObj = window.URL || window.webkitURL || window;
-      const blobURL = URLObj.createObjectURL(svgBlob);
-
-      const qrImg = new Image();
-      qrImg.onload = () => {
-        // White rounded card background for QR
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.roundRect(160, 265, 280, 280, 20);
-        ctx.fill();
-
-        ctx.drawImage(qrImg, 180, 285, 240, 240);
-        URLObj.revokeObjectURL(blobURL);
-
-        // Verification Badge & Footnotes
-        ctx.fillStyle = '#10b981';
-        ctx.font = 'bold 14px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('✓ CRYPTOGRAPHICALLY VERIFIED PASS', 300, 585);
-
-        ctx.fillStyle = '#64748b';
-        ctx.font = '12px sans-serif';
-        ctx.fillText('Single QR pass valid for Gate Entry and Kit Allocation', 300, 615);
-
-        resolve(canvas);
-      };
-      qrImg.onerror = () => resolve(null);
-      qrImg.src = blobURL;
-    });
-  };
-
   const handleDownload = async () => {
     if (downloading) return;
     setDownloading(true);
 
     try {
-      const canvas = await generatePassCanvas();
-      if (!canvas) {
-        showToast('Error generating QR pass image.');
+      const cardEl = cardRef.current;
+      if (!cardEl) {
+        showToast('Pass container not found.');
         setDownloading(false);
         return;
       }
 
+      // 1. Capture exact pixel-perfect snapshot with html2canvas at 3x resolution
+      const canvas = await html2canvas(cardEl, {
+        scale: 3,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#0f172a',
+        logging: false,
+      });
+
       const fileName = `GraduationPass_${candidate.studentId.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
+      const dataUrl = canvas.toDataURL('image/png', 1.0);
+
       const isNative = Boolean(
         typeof window !== 'undefined' &&
         (window as any).Capacitor?.isNativePlatform?.()
       );
 
-      // ── A. NATIVE CAPACITOR APP (ANDROID / IOS ONLY) ──
+      // ── A. NATIVE CAPACITOR APP (ANDROID / IOS) ──
       if (isNative) {
         try {
-          const dataUrl = canvas.toDataURL('image/png');
           const base64Raw = dataUrl.split(',')[1];
-
           const savedFile = await Filesystem.writeFile({
             path: fileName,
             data: base64Raw,
@@ -173,47 +77,41 @@ export const QRCard: React.FC<QRCardProps> = ({ candidate, event, token }) => {
 
           await Media.savePhoto({
             path: savedFile.uri,
-            albumIdentifier: 'Graduation Day Passes',
+            albumIdentifier: 'Graduation Passes',
           });
 
-          showToast('✓ QR Pass saved to Gallery!');
+          showToast('✓ Saved snapshot to Photo Gallery!');
           setDownloading(false);
           return;
         } catch (nativeErr: any) {
-          console.warn('[Native Save Notice, falling back to download]', nativeErr);
+          console.warn('[Native Save Warning, falling back to download]', nativeErr);
         }
       }
 
-      // ── B. DIRECT BROWSER IMAGE DOWNLOAD (WEB & MOBILE BROWSER) ──
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          showToast('Error saving QR Pass.');
-          setDownloading(false);
-          return;
-        }
+      // ── B. DIRECT INSTANT BROWSER DOWNLOAD (PC & MOBILE BROWSER) ──
+      const link = document.createElement('a');
+      link.download = fileName;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
-        const blobUrl = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 3000);
-
-        showToast('✓ QR Pass downloaded successfully!');
-        setDownloading(false);
-      }, 'image/png');
+      showToast('✓ Saved snapshot of QR Pass!');
+      setDownloading(false);
     } catch (err: any) {
-      console.error('[Download QR Error]', err);
-      showToast('Error downloading QR Pass. Please screenshot your pass.');
+      console.error('[Snapshot Download Error]', err);
+      showToast('Error taking snapshot. Please screenshot your pass.');
       setDownloading(false);
     }
   };
 
   return (
     <div className="flex flex-col items-center gap-6 w-full max-w-md mx-auto">
-      <div className="w-full bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 border border-indigo-500/30 rounded-3xl p-6 shadow-2xl relative overflow-hidden text-slate-100">
+      {/* ── Exact Pass Card Snapshot Target ── */}
+      <div
+        ref={cardRef}
+        className="w-full bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 border border-indigo-500/30 rounded-3xl p-6 shadow-2xl relative overflow-hidden text-slate-100"
+      >
         <div className="absolute -top-12 -right-12 w-36 h-36 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
         <div className="absolute -bottom-12 -left-12 w-36 h-36 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
 
@@ -263,10 +161,7 @@ export const QRCard: React.FC<QRCardProps> = ({ candidate, event, token }) => {
         </div>
 
         {/* QR Code Container */}
-        <div
-          ref={svgContainerRef}
-          className="flex flex-col items-center justify-center bg-white rounded-2xl p-5 shadow-inner mb-5"
-        >
+        <div className="flex flex-col items-center justify-center bg-white rounded-2xl p-5 shadow-inner mb-5">
           <QRCodeSVG value={token} size={200} level="H" includeMargin={false} />
           <div className="flex items-center gap-1.5 mt-3 text-slate-500 text-[11px] font-mono">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
@@ -289,12 +184,12 @@ export const QRCard: React.FC<QRCardProps> = ({ candidate, event, token }) => {
         {downloading ? (
           <>
             <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
-            <span>Downloading Pass...</span>
+            <span>Capturing Snapshot...</span>
           </>
         ) : (
           <>
             <Download className="w-5 h-5" />
-            <span>Save QR Pass to Gallery</span>
+            <span>Save QR Pass Snapshot to Gallery</span>
           </>
         )}
       </button>
