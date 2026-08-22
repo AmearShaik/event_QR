@@ -23,7 +23,7 @@ export const LoginPage: React.FC = () => {
   const [studentError, setStudentError] = useState<string | null>(null);
 
   // Admin State
-  const [adminUsername, setAdminUsername] = useState<string>('admin@graduation.edu');
+  const [adminUsername, setAdminUsername] = useState<string>('');
   const [adminPassword, setAdminPassword] = useState<string>('');
   const [showAdminPassword, setShowAdminPassword] = useState<boolean>(false);
   const [adminLoading, setAdminLoading] = useState<boolean>(false);
@@ -34,12 +34,20 @@ export const LoginPage: React.FC = () => {
 
   const handleStudentLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!studentId.trim()) return;
+    const cleanStudentId = studentId.trim();
+    const cleanPassword = studentPassword.trim() || cleanStudentId;
+
+    if (!cleanStudentId) {
+      setStudentError('Please enter your roll number.');
+      return;
+    }
+
     setStudentLoading(true);
     setStudentError(null);
-    const effectivePassword = studentPassword.trim() || studentId.trim();
+
     try {
-      const res = await api.studentLogin(studentId.trim(), effectivePassword);
+      console.log('[Student Login Request]', { studentId: cleanStudentId });
+      const res = await api.studentLogin(cleanStudentId, cleanPassword);
       if (res.status === 'NOT_FOUND') {
         setStudentError(res.error || 'Student record not found in official graduation list.');
         return;
@@ -47,7 +55,7 @@ export const LoginPage: React.FC = () => {
       loginStudent(res);
       navigate('/pass');
     } catch (err: any) {
-      setStudentError(err.message || 'Authentication failed. Please check your credentials.');
+      setStudentError(err.message || 'Authentication failed. Please check your roll number.');
     } finally {
       setStudentLoading(false);
     }
@@ -55,11 +63,20 @@ export const LoginPage: React.FC = () => {
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!adminUsername.trim() || !adminPassword.trim()) return;
+    const cleanUsername = adminUsername.trim();
+    const cleanPassword = adminPassword.trim();
+
+    if (!cleanUsername || !cleanPassword) {
+      setAdminError('Please enter both username and password.');
+      return;
+    }
+
     setAdminLoading(true);
     setAdminError(null);
+
     try {
-      const res = await api.login(adminUsername.trim(), adminPassword.trim());
+      console.log('[Admin Login Request]', { username: cleanUsername, passwordLength: cleanPassword.length });
+      const res = await api.login(cleanUsername, cleanPassword);
       loginAdmin(res.token, res.user);
       navigate('/dashboard');
     } catch (err: any) {
@@ -70,7 +87,7 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fbff] text-slate-800 font-sans relative overflow-x-hidden overflow-y-auto py-8 sm:py-12 flex flex-col items-center justify-start">
+    <div className="min-h-screen bg-[#f8fbff] text-slate-800 font-sans relative overflow-x-hidden overflow-y-auto py-6 sm:py-10 flex flex-col items-center justify-start">
       
       {/* ── Background Dot Patterns (Top-Left & Top-Right) ── */}
       <div 
@@ -227,9 +244,8 @@ export const LoginPage: React.FC = () => {
                     type="text"
                     value={studentId}
                     onChange={(e) => setStudentId(e.target.value)}
-                    placeholder="e.g. 2451-22-733-001 or 1608-22-732-002"
                     required
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-10 pr-3 text-slate-900 placeholder-slate-400 text-sm font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-10 pr-3 text-slate-900 text-sm font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                   />
                 </div>
               </div>
@@ -246,8 +262,7 @@ export const LoginPage: React.FC = () => {
                     type={showStudentPassword ? 'text' : 'password'}
                     value={studentPassword}
                     onChange={(e) => setStudentPassword(e.target.value)}
-                    placeholder="Enter your roll number"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-10 pr-10 text-slate-900 placeholder-slate-400 text-sm font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-10 pr-10 text-slate-900 text-sm font-mono focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                   />
                   <button
                     type="button"
@@ -313,9 +328,8 @@ export const LoginPage: React.FC = () => {
                     type="text"
                     value={adminUsername}
                     onChange={(e) => setAdminUsername(e.target.value)}
-                    placeholder="admin@graduation.edu"
                     required
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-10 pr-3 text-slate-900 placeholder-slate-400 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-10 pr-3 text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                   />
                 </div>
               </div>
@@ -332,9 +346,8 @@ export const LoginPage: React.FC = () => {
                     type={showAdminPassword ? 'text' : 'password'}
                     value={adminPassword}
                     onChange={(e) => setAdminPassword(e.target.value)}
-                    placeholder="admin@2026"
                     required
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-10 pr-10 text-slate-900 placeholder-slate-400 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-10 pr-10 text-slate-900 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                   />
                   <button
                     type="button"
