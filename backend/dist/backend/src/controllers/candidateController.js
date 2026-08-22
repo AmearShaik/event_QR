@@ -35,6 +35,7 @@ class CandidateController {
                     studentId: candidate.studentId,
                     name: candidate.name,
                     program: candidate.program,
+                    college: candidate.college || (candidate.studentId.startsWith('1608') ? 'Matrusri Engineering College' : 'MVSR Engineering College'),
                     paymentStatus: candidate.paymentStatus,
                     registrationStatus: candidate.registrationStatus,
                 },
@@ -70,11 +71,18 @@ class CandidateController {
                     : { isActive: true },
             });
             if (!event) {
-                // Fallback: fetch default event
-                event = await prisma.event.findFirst({ where: { slug: 'attendance' } });
-            }
-            if (!event) {
-                return res.status(400).json({ error: 'No active event available.' });
+                // Fallback: fetch default event or auto-create
+                event = await prisma.event.upsert({
+                    where: { slug: 'attendance' },
+                    update: { isActive: true },
+                    create: {
+                        slug: 'attendance',
+                        name: 'Graduation Day 2026',
+                        description: 'Official Entrance Attendance & Gate Pass Verification for Graduation Day 2026',
+                        isActive: true,
+                        requiresPayment: false,
+                    },
+                });
             }
             // Get or create single active QR token for candidate + event
             const qrTokenStr = await qrService_1.QrService.getOrCreateActiveToken(candidate.id, event.id);
@@ -110,19 +118,23 @@ class CandidateController {
      * Instantly verifies eligibility & generates/retrieves active QR pass.
      */
     static async studentLogin(req, res) {
+        console.log(`[Student Login Hit] IP: ${req.ip}, Body:`, req.body);
         try {
             const { studentId, password } = req.body;
             if (!studentId || !password) {
+                console.log(`[Student Login Failed] Missing studentId or password`);
                 return res.status(400).json({ error: 'User ID (Roll Number) and Password are required.' });
             }
             const trimmedId = studentId.trim();
             const trimmedPass = password.trim();
             // Student Roll Number acts as both User ID and Password
             if (trimmedId.toLowerCase() !== trimmedPass.toLowerCase()) {
+                console.log(`[Student Login Failed] Password mismatch for ID: "${trimmedId}"`);
                 return res.status(401).json({
                     error: 'Invalid Password. For student login, your Roll Number is your User ID and Password.',
                 });
             }
+            console.log(`[Student Login] Searching for student: "${trimmedId}"`);
             const candidate = await prisma.candidate.findUnique({
                 where: { studentId: trimmedId },
             });
@@ -134,13 +146,20 @@ class CandidateController {
                 });
             }
             // Removed payment and eligibility checks to allow all students.
-            // Active Event lookup
+            // Active Event lookup with auto-creation fallback
             let activeEvent = await prisma.event.findFirst({ where: { isActive: true } });
             if (!activeEvent) {
-                activeEvent = await prisma.event.findFirst({ where: { slug: 'attendance' } });
-            }
-            if (!activeEvent) {
-                return res.status(400).json({ error: 'No active ceremony event available.' });
+                activeEvent = await prisma.event.upsert({
+                    where: { slug: 'attendance' },
+                    update: { isActive: true },
+                    create: {
+                        slug: 'attendance',
+                        name: 'Graduation Day 2026',
+                        description: 'Official Entrance Attendance & Gate Pass Verification for Graduation Day 2026',
+                        isActive: true,
+                        requiresPayment: false,
+                    },
+                });
             }
             // Get or create single active QR token immediately for candidate + event
             const qrTokenStr = await qrService_1.QrService.getOrCreateActiveToken(candidate.id, activeEvent.id);
@@ -167,6 +186,7 @@ class CandidateController {
                     studentId: candidate.studentId,
                     name: candidate.name,
                     program: candidate.program,
+                    college: candidate.college || (candidate.studentId.startsWith('1608') ? 'Matrusri Engineering College' : 'MVSR Engineering College'),
                     paymentStatus: candidate.paymentStatus,
                     registrationStatus: 'REGISTERED',
                 },

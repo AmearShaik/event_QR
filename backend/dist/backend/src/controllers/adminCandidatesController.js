@@ -2,11 +2,13 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AdminCandidatesController = void 0;
 const client_1 = require("@prisma/client");
+const collegeUtils_1 = require("../utils/collegeUtils");
 const prisma = new client_1.PrismaClient();
 class AdminCandidatesController {
     static async listCandidates(req, res) {
+        console.log(`[Admin] Fetching candidates list. IP: ${req.ip}, Query:`, req.query);
         try {
-            const { search, program, paymentStatus, eligibility, attendance, qrGenerated, page = '1', limit = '50', } = req.query;
+            const { search, program, college, paymentStatus, eligibility, attendance, qrGenerated, page = '1', limit = '50', } = req.query;
             const pageNum = parseInt(page, 10) || 1;
             const limitNum = parseInt(limit, 10) || 50;
             const skip = (pageNum - 1) * limitNum;
@@ -17,7 +19,28 @@ class AdminCandidatesController {
                     { studentId: { contains: query, mode: 'insensitive' } },
                     { name: { contains: query, mode: 'insensitive' } },
                     { program: { contains: query, mode: 'insensitive' } },
+                    { college: { contains: query, mode: 'insensitive' } },
                 ];
+            }
+            if (college && typeof college === 'string' && college.toLowerCase() !== 'all') {
+                const query = college.trim().toLowerCase();
+                if (query === 'mvsr' || query.includes('mvsr')) {
+                    where.OR = [
+                        ...(where.OR || []),
+                        { college: { contains: 'MVSR', mode: 'insensitive' } },
+                        { studentId: { startsWith: '2451' } },
+                    ];
+                }
+                else if (query === 'matrusri' || query.includes('matrusri') || query === 'mec') {
+                    where.OR = [
+                        ...(where.OR || []),
+                        { college: { contains: 'Matrusri', mode: 'insensitive' } },
+                        { studentId: { startsWith: '1608' } },
+                    ];
+                }
+                else {
+                    where.college = { contains: college.trim(), mode: 'insensitive' };
+                }
             }
             if (program && typeof program === 'string') {
                 where.program = program;
@@ -66,6 +89,7 @@ class AdminCandidatesController {
                 studentId: c.studentId,
                 name: c.name,
                 program: c.program,
+                college: c.college || (0, collegeUtils_1.detectCollege)(c.studentId),
                 paymentStatus: c.paymentStatus,
                 normalizedPaymentStatus: c.normalizedPaymentStatus,
                 eligibilityStatus: c.eligibilityStatus,
@@ -106,7 +130,12 @@ class AdminCandidatesController {
             if (!candidate) {
                 return res.status(404).json({ error: 'Candidate not found.' });
             }
-            return res.json({ candidate });
+            return res.json({
+                candidate: {
+                    ...candidate,
+                    college: candidate.college || (0, collegeUtils_1.detectCollege)(candidate.studentId),
+                },
+            });
         }
         catch (err) {
             return res.status(500).json({ error: err.message || 'Error fetching candidate.' });

@@ -8,24 +8,63 @@ export class DashboardController {
     try {
       const { college } = req.query;
 
-      // Build college filter condition
-      const candidateWhere: any = {};
+      // Build college filter conditions properly using array inside AND
+      const collegeConditions: any[] = [];
       if (college && typeof college === 'string' && college.toLowerCase() !== 'all') {
         const query = college.trim().toLowerCase();
         if (query === 'mvsr' || query.includes('mvsr')) {
-          candidateWhere.OR = [
-            { college: { contains: 'MVSR', mode: 'insensitive' } },
-            { studentId: { startsWith: '2451' } },
-          ];
+          collegeConditions.push({
+            OR: [
+              { college: { contains: 'MVSR', mode: 'insensitive' } },
+              { studentId: { startsWith: '2451' } },
+            ],
+          });
         } else if (query === 'matrusri' || query.includes('matrusri') || query === 'mec') {
-          candidateWhere.OR = [
-            { college: { contains: 'Matrusri', mode: 'insensitive' } },
-            { studentId: { startsWith: '1608' } },
-          ];
+          collegeConditions.push({
+            OR: [
+              { college: { contains: 'Matrusri', mode: 'insensitive' } },
+              { studentId: { startsWith: '1608' } },
+            ],
+          });
         } else {
-          candidateWhere.college = { contains: college.trim(), mode: 'insensitive' };
+          collegeConditions.push({
+            college: { contains: college.trim(), mode: 'insensitive' },
+          });
         }
       }
+
+      const baseCandidateWhere = collegeConditions.length > 0 ? { AND: collegeConditions } : {};
+
+      const paidCondition = {
+        AND: [
+          ...collegeConditions,
+          {
+            OR: [
+              { normalizedPaymentStatus: 'PAID' },
+              { paymentStatus: { contains: 'Paid', mode: 'insensitive' } },
+            ],
+          },
+          {
+            NOT: [
+              { paymentStatus: { contains: 'Not', mode: 'insensitive' } },
+              { paymentStatus: { contains: 'Unpaid', mode: 'insensitive' } },
+            ],
+          },
+        ],
+      };
+
+      const unpaidCondition = {
+        AND: [
+          ...collegeConditions,
+          {
+            OR: [
+              { normalizedPaymentStatus: { in: ['NOT_PAID', 'PARTIALLY_PAID'] } },
+              { paymentStatus: { contains: 'Not', mode: 'insensitive' } },
+              { paymentStatus: { contains: 'Unpaid', mode: 'insensitive' } },
+            ],
+          },
+        ],
+      };
 
       // Find ceremony events
       const entryEvent = await prisma.event.findFirst({
@@ -61,35 +100,14 @@ export class DashboardController {
         programBreakdown,
         collegeBreakdown,
       ] = await Promise.all([
-        prisma.candidate.count({ where: candidateWhere }),
-        prisma.candidate.count({
-          where: {
-            ...candidateWhere,
-            OR: [
-              { normalizedPaymentStatus: 'PAID' },
-              { paymentStatus: { contains: 'Paid', mode: 'insensitive' } },
-            ],
-            NOT: [
-              { paymentStatus: { contains: 'Not', mode: 'insensitive' } },
-              { paymentStatus: { contains: 'Unpaid', mode: 'insensitive' } },
-            ],
-          },
-        }),
-        prisma.candidate.count({
-          where: {
-            ...candidateWhere,
-            OR: [
-              { normalizedPaymentStatus: { in: ['NOT_PAID', 'PARTIALLY_PAID'] } },
-              { paymentStatus: { contains: 'Not', mode: 'insensitive' } },
-              { paymentStatus: { contains: 'Unpaid', mode: 'insensitive' } },
-            ],
-          },
-        }),
-        prisma.candidate.count({ where: { ...candidateWhere, eligibilityStatus: true } }),
+        prisma.candidate.count({ where: baseCandidateWhere }),
+        prisma.candidate.count({ where: paidCondition }),
+        prisma.candidate.count({ where: unpaidCondition }),
+        prisma.candidate.count({ where: { ...baseCandidateWhere, eligibilityStatus: true } }),
         prisma.qrToken.count({
           where: {
             isActive: true,
-            ...(Object.keys(candidateWhere).length > 0 ? { candidate: candidateWhere } : {}),
+            ...(Object.keys(baseCandidateWhere).length > 0 ? { candidate: baseCandidateWhere } : {}),
           },
         }),
 
@@ -98,7 +116,7 @@ export class DashboardController {
           ? prisma.attendance.count({
               where: {
                 eventId: entryEventId,
-                ...(Object.keys(candidateWhere).length > 0 ? { candidate: candidateWhere } : {}),
+                candidate: baseCandidateWhere,
               },
             })
           : 0,
@@ -106,17 +124,7 @@ export class DashboardController {
           ? prisma.attendance.count({
               where: {
                 eventId: entryEventId,
-                candidate: {
-                  ...candidateWhere,
-                  OR: [
-                    { normalizedPaymentStatus: 'PAID' },
-                    { paymentStatus: { contains: 'Paid', mode: 'insensitive' } },
-                  ],
-                  NOT: [
-                    { paymentStatus: { contains: 'Not', mode: 'insensitive' } },
-                    { paymentStatus: { contains: 'Unpaid', mode: 'insensitive' } },
-                  ],
-                },
+                candidate: paidCondition,
               },
             })
           : 0,
@@ -124,14 +132,7 @@ export class DashboardController {
           ? prisma.attendance.count({
               where: {
                 eventId: entryEventId,
-                candidate: {
-                  ...candidateWhere,
-                  OR: [
-                    { normalizedPaymentStatus: { in: ['NOT_PAID', 'PARTIALLY_PAID'] } },
-                    { paymentStatus: { contains: 'Not', mode: 'insensitive' } },
-                    { paymentStatus: { contains: 'Unpaid', mode: 'insensitive' } },
-                  ],
-                },
+                candidate: unpaidCondition,
               },
             })
           : 0,
@@ -141,7 +142,7 @@ export class DashboardController {
           ? prisma.attendance.count({
               where: {
                 eventId: kitEventId,
-                ...(Object.keys(candidateWhere).length > 0 ? { candidate: candidateWhere } : {}),
+                candidate: baseCandidateWhere,
               },
             })
           : 0,
@@ -149,17 +150,7 @@ export class DashboardController {
           ? prisma.attendance.count({
               where: {
                 eventId: kitEventId,
-                candidate: {
-                  ...candidateWhere,
-                  OR: [
-                    { normalizedPaymentStatus: 'PAID' },
-                    { paymentStatus: { contains: 'Paid', mode: 'insensitive' } },
-                  ],
-                  NOT: [
-                    { paymentStatus: { contains: 'Not', mode: 'insensitive' } },
-                    { paymentStatus: { contains: 'Unpaid', mode: 'insensitive' } },
-                  ],
-                },
+                candidate: paidCondition,
               },
             })
           : 0,
@@ -167,20 +158,13 @@ export class DashboardController {
           ? prisma.attendance.count({
               where: {
                 eventId: kitEventId,
-                candidate: {
-                  ...candidateWhere,
-                  OR: [
-                    { normalizedPaymentStatus: { in: ['NOT_PAID', 'PARTIALLY_PAID'] } },
-                    { paymentStatus: { contains: 'Not', mode: 'insensitive' } },
-                    { paymentStatus: { contains: 'Unpaid', mode: 'insensitive' } },
-                  ],
-                },
+                candidate: unpaidCondition,
               },
             })
           : 0,
 
         prisma.candidate.groupBy({
-          where: candidateWhere,
+          where: baseCandidateWhere,
           by: ['program'],
           _count: { id: true },
         }),
@@ -197,7 +181,9 @@ export class DashboardController {
       const availableColleges = [
         'MVSR Engineering College',
         'Matrusri Engineering College',
-        ...collegeBreakdown.map((c) => c.college).filter((c) => c && !['MVSR Engineering College', 'Matrusri Engineering College'].includes(c)),
+        ...collegeBreakdown
+          .map((c) => c.college)
+          .filter((c) => c && !['MVSR Engineering College', 'Matrusri Engineering College'].includes(c)),
       ];
 
       return res.json({
