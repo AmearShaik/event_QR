@@ -3,10 +3,16 @@ import { PasswordUtils } from './src/utils/password';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  log: ['warn', 'error'],
+});
 
-async function main() {
-  console.log('Connecting to database...');
+async function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function seedWithRetry(retries = 5) {
+  console.log('Connecting to Neon PostgreSQL database...');
   
   const accounts = [
     { username: 'admin@graduation.edu', password: 'admin@2026', name: 'Graduation Admin', role: 'ADMIN' },
@@ -14,34 +20,46 @@ async function main() {
     { username: 'admin@test.com', password: 'admin@2026', name: 'Test Admin', role: 'ADMIN' },
   ];
 
-  console.log('\n--- SEEDING ADMIN ACCOUNTS INTO DATABASE ---');
-  for (const acc of accounts) {
-    const passwordHash = PasswordUtils.hashPassword(acc.password);
-    const user = await prisma.user.upsert({
-      where: { username: acc.username.toLowerCase() },
-      update: {
-        passwordHash,
-        name: acc.name,
-        role: acc.role,
-      },
-      create: {
-        username: acc.username.toLowerCase(),
-        passwordHash,
-        name: acc.name,
-        role: acc.role,
-      },
-    });
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      console.log(`[Attempt ${attempt}/${retries}] Seeding admin accounts...`);
+      
+      for (const acc of accounts) {
+        const passwordHash = PasswordUtils.hashPassword(acc.password);
+        const user = await prisma.user.upsert({
+          where: { username: acc.username.toLowerCase() },
+          update: {
+            passwordHash,
+            name: acc.name,
+            role: acc.role,
+          },
+          create: {
+            username: acc.username.toLowerCase(),
+            passwordHash,
+            name: acc.name,
+            role: acc.role,
+          },
+        });
 
-    // Verify immediate match
-    const isValid = PasswordUtils.verifyPassword(acc.password, user.passwordHash);
-    console.log(`✓ Seeded User: "${user.username}" | Password: "${acc.password}" | Match Verified: ${isValid} | ID: ${user.id}`);
+        const isValid = PasswordUtils.verifyPassword(acc.password, user.passwordHash);
+        console.log(`✓ [SUCCESS] Seeded: "${user.username}" | Role: ${user.role} | Password Verified: ${isValid} | ID: ${user.id}`);
+      }
+
+      console.log('\n--- ALL ADMIN ACCOUNTS SEEDED & READY IN DATABASE ---\n');
+      return;
+    } catch (err: any) {
+      console.warn(`Attempt ${attempt} failed (${err.message}). Retrying in 3 seconds...`);
+      if (attempt === retries) {
+        throw err;
+      }
+      await sleep(3000);
+    }
   }
-  console.log('---------------------------------------------\n');
 }
 
-main()
+seedWithRetry()
   .catch((err) => {
-    console.error('Error seeding admin accounts:', err);
+    console.error('Final failure seeding admin:', err);
     process.exit(1);
   })
   .finally(async () => {

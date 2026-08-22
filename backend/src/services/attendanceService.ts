@@ -22,12 +22,12 @@ export class AttendanceService {
 
     const kitEvent = await prisma.event.upsert({
       where: { slug: 'kit-allocation' },
-      update: { name: 'Graduation Kit Allocation', requiresPayment: true, isActive: true },
+      update: { name: 'Graduation Kit Allocation', requiresPayment: false, isActive: true },
       create: {
         slug: 'kit-allocation',
         name: 'Graduation Kit Allocation',
-        description: 'Graduation gown and kit distribution for paid candidates only',
-        requiresPayment: true,
+        description: 'Graduation gown and kit distribution for candidates (tracked for both paid and unpaid)',
+        requiresPayment: false,
         isActive: true,
       },
     });
@@ -38,6 +38,7 @@ export class AttendanceService {
   /**
    * Performs real-time backend validation for Gate Entry or Kit Allocation.
    * Single QR code works for both checkpoints with dedicated duplicate prevention.
+   * Kit allocation is allowed for both paid and unpaid candidates, with fee status tracked.
    */
   static async scanQrToken(token: string, scanModeOrEventId?: string): Promise<ScanResponse> {
     if (!token || typeof token !== 'string') {
@@ -68,7 +69,7 @@ export class AttendanceService {
       }
     }
 
-    const isKitMode = targetEvent.slug === 'kit-allocation' || targetEvent.requiresPayment;
+    const isKitMode = targetEvent.slug === 'kit-allocation' || targetEvent.name.toLowerCase().includes('kit');
 
     // Step 1: Find QR token and candidate
     const qrToken = await prisma.qrToken.findUnique({
@@ -121,25 +122,12 @@ export class AttendanceService {
     event: any,
     isKitMode: boolean
   ): Promise<ScanResponse> {
-    const isPaid =
-      candidate.normalizedPaymentStatus === 'PAID' ||
-      (candidate.paymentStatus && candidate.paymentStatus.toLowerCase().includes('paid') && !candidate.paymentStatus.toLowerCase().includes('unpaid'));
+    const norm = (candidate.normalizedPaymentStatus || '').toUpperCase();
+    const raw = (candidate.paymentStatus || '').trim().toLowerCase();
+    const isPaid = norm === 'PAID' || (raw === 'paid' || (raw.includes('paid') && !raw.includes('not') && !raw.includes('unpaid') && !raw.includes('due')));
+    const displayFeeStatus = isPaid ? 'Paid' : (candidate.paymentStatus || 'Not Paid');
 
-    // Step 2: Payment check for Kit Allocation
-    if (isKitMode && !isPaid) {
-      return {
-        status: 'NOT_ELIGIBLE',
-        message: `KIT ALLOCATION DENIED: Fee status is "${candidate.paymentStatus || 'Unpaid'}". Graduation kit is strictly for Paid candidates.`,
-        candidate: {
-          studentId: candidate.studentId,
-          name: candidate.name,
-          program: candidate.program,
-        },
-        event: event.name,
-      };
-    }
-
-    // Step 3: Duplicate scan check for this specific event
+    // Duplicate scan check for this specific checkpoint
     const existing = await prisma.attendance.findUnique({
       where: {
         candidateId_eventId: {
@@ -159,7 +147,7 @@ export class AttendanceService {
       if (isKitMode) {
         return {
           status: 'DUPLICATE',
-          message: `KIT ALREADY ALLOCATED: Graduation kit was already collected at ${timeStr}.`,
+          message: `KIT ALREADY ALLOCATED: Kit was already collected by ${candidate.name} at ${timeStr}.`,
           candidate: {
             studentId: candidate.studentId,
             name: candidate.name,
@@ -172,7 +160,7 @@ export class AttendanceService {
 
       return {
         status: 'DUPLICATE',
-        message: `ALREADY SCANNED: Gate entry was already recorded at ${timeStr}.`,
+        message: `ALREADY SCANNED: Gate entry was already recorded for ${candidate.name} at ${timeStr}.`,
         candidate: {
           studentId: candidate.studentId,
           name: candidate.name,
@@ -183,7 +171,7 @@ export class AttendanceService {
       };
     }
 
-    // Step 4: Record new scan
+    // Step 3: Record new scan
     try {
       const attendance = await prisma.attendance.create({
         data: {
@@ -195,8 +183,8 @@ export class AttendanceService {
       });
 
       const successMsg = isKitMode
-        ? `Graduation Kit Allocated to ${candidate.name} (${candidate.studentId})!`
-        : `Gate Entry Verified for ${candidate.name} (${candidate.studentId})!`;
+        ? `Graduation Kit Allocated to ${candidate.name} (${displayFeeStatus})`
+        : `Gate Entry Verified for ${candidate.name} (${displayFeeStatus})`;
 
       return {
         status: 'SUCCESS',

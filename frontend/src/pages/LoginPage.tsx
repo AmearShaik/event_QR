@@ -252,7 +252,7 @@ export const LoginPage: React.FC = () => {
                   {/* Info banner */}
                   <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-medium">
                     <KeyRound className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                    <span><strong>Tip:</strong> Your Roll Number is both your User ID and Password.</span>
+                    <span><strong>Tip:</strong> MVSR (2451-xxxx) & Matrusri (1608-xxxx) students can log in directly using Roll Number as User ID and Password.</span>
                   </div>
 
                   {/* Student ID */}
@@ -267,7 +267,7 @@ export const LoginPage: React.FC = () => {
                         type="text"
                         value={studentId}
                         onChange={(e) => setStudentId(e.target.value)}
-                        placeholder="e.g. 2451-22-733-001"
+                        placeholder="e.g. 2451-22-733-001 or 1608-22-732-002"
                         required
                         className="w-full bg-slate-800/90 border border-slate-700 rounded-2xl py-3 pl-10 pr-4 text-white placeholder-slate-500 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/50 transition-all"
                       />

@@ -115,14 +115,24 @@ export interface ImportConfirmResponse {
   duplicateStudentIds: number;
 }
 
+export interface CheckpointStats {
+  total: number;
+  paid: number;
+  unpaid: number;
+  remaining: number;
+  percentage: number;
+}
+
 export interface DashboardStats {
   totalCandidates: number;
   paidCandidates: number;
   notPaidCandidates: number;
-  partiallyPaidCandidates: number;
+  partiallyPaidCandidates?: number;
   eligibleCandidates: number;
   notEligibleCandidates: number;
   qrGeneratedCount: number;
+  entryStats?: CheckpointStats;
+  kitStats?: CheckpointStats;
   attendanceCount: number;
   attendedPaidCount: number;
   attendedNotPaidCount: number;

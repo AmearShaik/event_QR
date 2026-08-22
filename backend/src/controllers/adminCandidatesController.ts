@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { detectCollege } from '../utils/collegeUtils';
 
 const prisma = new PrismaClient();
 
@@ -10,6 +11,7 @@ export class AdminCandidatesController {
       const {
         search,
         program,
+        college,
         paymentStatus,
         eligibility,
         attendance,
@@ -30,7 +32,27 @@ export class AdminCandidatesController {
           { studentId: { contains: query, mode: 'insensitive' } },
           { name: { contains: query, mode: 'insensitive' } },
           { program: { contains: query, mode: 'insensitive' } },
+          { college: { contains: query, mode: 'insensitive' } },
         ];
+      }
+
+      if (college && typeof college === 'string' && college.toLowerCase() !== 'all') {
+        const query = college.trim().toLowerCase();
+        if (query === 'mvsr' || query.includes('mvsr')) {
+          where.OR = [
+            ...(where.OR || []),
+            { college: { contains: 'MVSR', mode: 'insensitive' } },
+            { studentId: { startsWith: '2451' } },
+          ];
+        } else if (query === 'matrusri' || query.includes('matrusri') || query === 'mec') {
+          where.OR = [
+            ...(where.OR || []),
+            { college: { contains: 'Matrusri', mode: 'insensitive' } },
+            { studentId: { startsWith: '1608' } },
+          ];
+        } else {
+          where.college = { contains: college.trim(), mode: 'insensitive' };
+        }
       }
 
       if (program && typeof program === 'string') {
@@ -84,6 +106,7 @@ export class AdminCandidatesController {
         studentId: c.studentId,
         name: c.name,
         program: c.program,
+        college: c.college || detectCollege(c.studentId),
         paymentStatus: c.paymentStatus,
         normalizedPaymentStatus: c.normalizedPaymentStatus,
         eligibilityStatus: c.eligibilityStatus,
@@ -127,7 +150,12 @@ export class AdminCandidatesController {
         return res.status(404).json({ error: 'Candidate not found.' });
       }
 
-      return res.json({ candidate });
+      return res.json({
+        candidate: {
+          ...candidate,
+          college: candidate.college || detectCollege(candidate.studentId),
+        },
+      });
     } catch (err: any) {
       return res.status(500).json({ error: err.message || 'Error fetching candidate.' });
     }

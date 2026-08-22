@@ -2,13 +2,13 @@ import React, { useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Download, CheckCircle2, GraduationCap, ShieldCheck } from './Icons';
 import { StatusBadge } from './StatusBadge';
-import { api } from '../services/api';
 
 interface QRCardProps {
   candidate: {
     studentId: string;
     name: string;
     program: string;
+    college?: string;
     paymentStatus?: string;
   };
   event: {
@@ -19,8 +19,13 @@ interface QRCardProps {
 
 export const QRCard: React.FC<QRCardProps> = ({ candidate, event, token }) => {
   const svgContainerRef = useRef<HTMLDivElement>(null);
-
   const [toastMessage, setToastMessage] = React.useState<string | null>(null);
+
+  const collegeName =
+    candidate.college ||
+    (candidate.studentId.trim().startsWith('1608')
+      ? 'Matrusri Engineering College'
+      : 'MVSR Engineering College');
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -32,124 +37,121 @@ export const QRCard: React.FC<QRCardProps> = ({ candidate, event, token }) => {
       const scale = 2; // 2x resolution for crispness
       const canvas = document.createElement('canvas');
       canvas.width = 600 * scale;
-      canvas.height = 750 * scale;
+      canvas.height = 780 * scale;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
       ctx.scale(scale, scale);
 
       // Background Gradient
-      const grad = ctx.createLinearGradient(0, 0, 600, 750);
+      const grad = ctx.createLinearGradient(0, 0, 600, 780);
       grad.addColorStop(0, '#0f172a');
       grad.addColorStop(0.5, '#1e293b');
       grad.addColorStop(1, '#0f172a');
       ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, 600, 750);
+      ctx.fillRect(0, 0, 600, 780);
 
       // Outer Border
       ctx.strokeStyle = '#10b981';
       ctx.lineWidth = 4;
-      ctx.strokeRect(10, 10, 580, 730);
+      ctx.strokeRect(10, 10, 580, 760);
 
       // Header Title
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 28px sans-serif';
+      ctx.font = 'bold 26px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('GRADUATION DAY 2026', 300, 60);
+      ctx.fillText(collegeName.toUpperCase(), 300, 50);
+
+      ctx.fillStyle = '#10b981';
+      ctx.font = 'bold 18px sans-serif';
+      ctx.fillText('GRADUATION DAY 2026', 300, 80);
 
       ctx.fillStyle = '#94a3b8';
-      ctx.font = '16px sans-serif';
-      ctx.fillText(event.name || 'Official Entrance Pass', 300, 90);
+      ctx.font = '14px sans-serif';
+      ctx.fillText(event.name || 'Official Entrance & Ceremony Pass', 300, 105);
 
       // Divider line
       ctx.strokeStyle = '#334155';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(40, 110);
-      ctx.lineTo(560, 110);
+      ctx.moveTo(40, 120);
+      ctx.lineTo(560, 120);
       ctx.stroke();
 
-      // Candidate Info Box
-      ctx.fillStyle = '#090d16';
-      ctx.fillRect(40, 130, 520, 150);
-
+      // Candidate Name
       ctx.fillStyle = '#94a3b8';
       ctx.font = '12px sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText('CANDIDATE NAME', 60, 160);
+      ctx.fillText('CANDIDATE NAME', 50, 145);
 
       ctx.fillStyle = '#6ee7b7';
-      ctx.font = 'bold 24px sans-serif';
-      ctx.fillText(candidate.name, 60, 190);
+      ctx.font = 'bold 22px sans-serif';
+      ctx.fillText(candidate.name, 50, 175);
 
+      // Student ID & Program
       ctx.fillStyle = '#94a3b8';
       ctx.font = '12px sans-serif';
-      ctx.fillText('STUDENT ID', 60, 230);
-      ctx.fillText('PROGRAM / COURSE', 320, 230);
+      ctx.fillText('ROLL NUMBER / USER ID', 50, 210);
+      ctx.fillText('BRANCH / PROGRAM', 320, 210);
 
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 18px monospace';
-      ctx.fillText(candidate.studentId, 60, 255);
-      ctx.font = 'bold 18px sans-serif';
-      ctx.fillText(candidate.program, 320, 255);
+      ctx.font = 'bold 16px monospace';
+      ctx.fillText(candidate.studentId, 50, 235);
 
-      // QR Code rendering from SVG element
+      ctx.font = 'bold 15px sans-serif';
+      ctx.fillText(candidate.program, 320, 235);
+
+      // Draw QR Code
       const svgEl = svgContainerRef.current?.querySelector('svg');
       if (svgEl) {
-        const xml = new XMLSerializer().serializeToString(svgEl);
-        const svg64 = btoa(unescape(encodeURIComponent(xml)));
-        const image = new Image();
-        image.src = 'data:image/svg+xml;base64,' + svg64;
+        const svgData = new XMLSerializer().serializeToString(svgEl);
+        const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+        const URLObj = window.URL || window.webkitURL || window;
+        const blobURL = URLObj.createObjectURL(svgBlob);
 
-        await new Promise((resolve, reject) => {
-          image.onload = resolve;
-          image.onerror = reject;
-        });
+        const qrImg = new Image();
+        qrImg.onload = () => {
+          // White background card for QR
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.roundRect(160, 265, 280, 280, 20);
+          ctx.fill();
 
-        // White background box for QR code
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(150, 310, 300, 300);
+          ctx.drawImage(qrImg, 180, 285, 240, 240);
+          URLObj.revokeObjectURL(blobURL);
 
-        ctx.drawImage(image, 175, 335, 250, 250);
+          // Verification badge
+          ctx.fillStyle = '#10b981';
+          ctx.font = 'bold 14px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('✓ CRYPTOGRAPHICALLY VERIFIED PASS', 300, 585);
+
+          ctx.fillStyle = '#64748b';
+          ctx.font = '12px sans-serif';
+          ctx.fillText('Single QR pass valid for Gate Entry and Kit Allocation', 300, 615);
+
+          // Save Canvas directly to device download
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              showToast('Error generating image. Please screenshot the pass.');
+              return;
+            }
+            const blobUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = `GraduationPass_${candidate.studentId.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+            showToast('QR Pass saved to gallery / downloads!');
+          }, 'image/png');
+        };
+        qrImg.src = blobURL;
       }
-
-      // Security Badge Footer
-      ctx.fillStyle = '#10b981';
-      ctx.font = 'bold 14px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('✓ Cryptographically Verified Entrance Pass', 300, 650);
-
-      ctx.fillStyle = '#64748b';
-      ctx.font = '12px sans-serif';
-      ctx.fillText('Present this pass at the gate scanner for entrance verification.', 300, 685);
-
-      const dataUrl = canvas.toDataURL('image/png', 1.0);
-      const fileName = `Graduation-Pass-${candidate.studentId}.png`;
-
-      // Convert dataUrl to Blob
-      const byteString = atob(dataUrl.split(',')[1]);
-      const mimeString = dataUrl.split(',')[0].split(':')[1].split(';')[0];
-      const ab = new ArrayBuffer(byteString.length);
-      const ia = new Uint8Array(ab);
-      for (let i = 0; i < byteString.length; i++) {
-        ia[i] = byteString.charCodeAt(i);
-      }
-      const blob = new Blob([ab], { type: mimeString });
-      const blobUrl = URL.createObjectURL(blob);
-
-      // Trigger direct download
-      const link = document.createElement('a');
-      link.download = fileName;
-      link.href = blobUrl;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-
-      showToast('QR Pass downloaded to your device!');
     } catch (err) {
       console.error('PNG export error', err);
-      showToast('Error saving QR Pass. Please take a screenshot.');
+      showToast('Error saving QR Pass. Please screenshot the screen.');
     }
   };
 
@@ -159,20 +161,22 @@ export const QRCard: React.FC<QRCardProps> = ({ candidate, event, token }) => {
         <div className="absolute -top-12 -right-12 w-36 h-36 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
         <div className="absolute -bottom-12 -left-12 w-36 h-36 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
 
-        <div className="flex items-center justify-between border-b border-slate-700/60 pb-4 mb-6">
+        {/* Card Header */}
+        <div className="flex items-center justify-between border-b border-slate-700/60 pb-4 mb-5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
               <GraduationCap className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="font-bold text-base text-white leading-tight">Graduation Day 2026</h3>
-              <p className="text-xs text-slate-400 font-medium">{event.name}</p>
+              <h3 className="font-bold text-base text-white leading-tight">{collegeName}</h3>
+              <p className="text-xs text-emerald-400 font-medium">Graduation Day 2026</p>
             </div>
           </div>
           <StatusBadge status="ELIGIBLE" />
         </div>
 
-        <div className="space-y-3 mb-6 bg-slate-900/60 rounded-2xl p-4 border border-slate-700/40">
+        {/* Candidate Details */}
+        <div className="space-y-3 mb-5 bg-slate-900/60 rounded-2xl p-4 border border-slate-700/40">
           <div>
             <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 block">
               Candidate Name
@@ -185,7 +189,7 @@ export const QRCard: React.FC<QRCardProps> = ({ candidate, event, token }) => {
           <div className="grid grid-cols-2 gap-4 pt-1">
             <div>
               <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 block">
-                Student ID
+                Roll Number (User ID)
               </span>
               <span className="text-sm font-mono font-bold text-slate-200">
                 {candidate.studentId}
@@ -193,7 +197,7 @@ export const QRCard: React.FC<QRCardProps> = ({ candidate, event, token }) => {
             </div>
             <div>
               <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 block">
-                Program / Course
+                Branch / Program
               </span>
               <span className="text-sm font-medium text-slate-200 truncate block">
                 {candidate.program}
@@ -202,36 +206,38 @@ export const QRCard: React.FC<QRCardProps> = ({ candidate, event, token }) => {
           </div>
         </div>
 
+        {/* QR Code Container */}
         <div
           ref={svgContainerRef}
-          className="flex flex-col items-center justify-center bg-white rounded-2xl p-5 shadow-inner mb-6"
+          className="flex flex-col items-center justify-center bg-white rounded-2xl p-5 shadow-inner mb-5"
         >
           <QRCodeSVG value={token} size={200} level="H" includeMargin={false} />
           <div className="flex items-center gap-1.5 mt-3 text-slate-500 text-[11px] font-mono">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Cryptographically Verified Pass</span>
+            <span>Verified Graduation Pass</span>
           </div>
         </div>
 
-        <div className="text-center text-[11px] text-slate-400 flex items-center justify-center gap-1">
+        <div className="text-center text-[11px] text-slate-400 flex items-center justify-center gap-1 mb-2">
           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Present this QR card at the entrance gate</span>
+          <span>Valid for Gate Entry & Kit Allocation checkpoints</span>
         </div>
       </div>
 
+      {/* Download Action Button */}
       <button
         onClick={handleDownload}
-        className="w-full py-3.5 px-6 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 group cursor-pointer"
+        className="w-full bg-gradient-to-r from-emerald-500 to-emerald-400 hover:from-emerald-400 hover:to-emerald-300 text-slate-950 font-bold py-3.5 px-6 rounded-2xl shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
       >
-        <Download className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" />
-        Download QR Card (PNG)
+        <Download className="w-5 h-5" />
+        <span>Save QR Pass to Gallery</span>
       </button>
 
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-slate-800 text-white px-6 py-3 rounded-2xl border border-emerald-500/30 shadow-2xl shadow-emerald-500/20 flex items-center gap-3 animate-in fade-in slide-in-from-top-5">
-          <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-          <span className="font-semibold text-sm">{toastMessage}</span>
+        <div className="fixed bottom-6 z-50 bg-slate-900/95 border border-emerald-500/50 text-emerald-300 px-5 py-3 rounded-2xl shadow-2xl text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-3 duration-200">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{toastMessage}</span>
         </div>
       )}
     </div>

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { AttendanceService } from '../services/attendanceService';
+import { detectCollege } from '../utils/collegeUtils';
 
 const prisma = new PrismaClient();
 
@@ -32,7 +33,7 @@ export class AttendanceController {
    */
   static async listAttendance(req: Request, res: Response) {
     try {
-      const { search, eventId, page = '1', limit = '50' } = req.query;
+      const { search, eventId, college, page = '1', limit = '50' } = req.query;
       const pageNum = parseInt(page as string, 10) || 1;
       const limitNum = parseInt(limit as string, 10) || 50;
       const skip = (pageNum - 1) * limitNum;
@@ -47,11 +48,37 @@ export class AttendanceController {
         const query = search.trim();
         where.candidate = {
           OR: [
-            { studentId: { contains: query } },
-            { name: { contains: query } },
-            { program: { contains: query } },
+            { studentId: { contains: query, mode: 'insensitive' } },
+            { name: { contains: query, mode: 'insensitive' } },
+            { program: { contains: query, mode: 'insensitive' } },
           ],
         };
+      }
+
+      if (college && typeof college === 'string' && college.toLowerCase() !== 'all') {
+        const query = college.trim().toLowerCase();
+        if (query === 'mvsr' || query.includes('mvsr')) {
+          where.candidate = {
+            ...(where.candidate || {}),
+            OR: [
+              { college: { contains: 'MVSR', mode: 'insensitive' } },
+              { studentId: { startsWith: '2451' } },
+            ],
+          };
+        } else if (query === 'matrusri' || query.includes('matrusri') || query === 'mec') {
+          where.candidate = {
+            ...(where.candidate || {}),
+            OR: [
+              { college: { contains: 'Matrusri', mode: 'insensitive' } },
+              { studentId: { startsWith: '1608' } },
+            ],
+          };
+        } else {
+          where.candidate = {
+            ...(where.candidate || {}),
+            college: { contains: college.trim(), mode: 'insensitive' },
+          };
+        }
       }
 
       const [totalCount, records] = await Promise.all([
@@ -74,6 +101,7 @@ export class AttendanceController {
         studentId: r.candidate.studentId,
         candidateName: r.candidate.name,
         program: r.candidate.program,
+        college: r.candidate.college || detectCollege(r.candidate.studentId),
         paymentStatus: r.candidate.paymentStatus,
         eligibilityStatus: r.candidate.eligibilityStatus,
         eventId: r.eventId,
@@ -106,9 +134,10 @@ export class AttendanceController {
         orderBy: { entryTime: 'desc' },
       });
 
-      let csv = 'ID,Student ID,Candidate Name,Program,Payment Status,Event,Entry Time,Status\n';
+      let csv = 'ID,Student ID,Candidate Name,College,Program,Payment Status,Event,Entry Time,Status\n';
       for (const r of records) {
-        csv += `"${r.id}","${r.candidate.studentId}","${r.candidate.name}","${r.candidate.program}","${r.candidate.paymentStatus}","${r.event.name}","${r.entryTime.toISOString()}","${r.status}"\n`;
+        const college = r.candidate.college || detectCollege(r.candidate.studentId);
+        csv += `"${r.id}","${r.candidate.studentId}","${r.candidate.name}","${college}","${r.candidate.program}","${r.candidate.paymentStatus}","${r.event.name}","${r.entryTime.toISOString()}","${r.status}"\n`;
       }
 
       res.setHeader('Content-Type', 'text/csv');

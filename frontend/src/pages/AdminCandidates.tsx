@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { api } from '../services/api';
 import { StatusBadge } from '../components/StatusBadge';
-import { Search, Filter, RefreshCw, ChevronLeft, ChevronRight, Users } from '../components/Icons';
+import { Search, Filter, RefreshCw, ChevronLeft, ChevronRight, Users, GraduationCap } from '../components/Icons';
 
 export const AdminCandidates: React.FC = () => {
   const [candidates, setCandidates] = useState<any[]>([]);
@@ -13,6 +13,7 @@ export const AdminCandidates: React.FC = () => {
   const searchParams = new URLSearchParams(location.search);
 
   const [search, setSearch] = useState<string>(searchParams.get('search') || '');
+  const [college, setCollege] = useState<string>(searchParams.get('college') || '');
   const [program, setProgram] = useState<string>(searchParams.get('program') || '');
   const [paymentStatus, setPaymentStatus] = useState<string>(searchParams.get('paymentStatus') || '');
   const [eligibility, setEligibility] = useState<string>(searchParams.get('eligibility') || '');
@@ -30,6 +31,7 @@ export const AdminCandidates: React.FC = () => {
         limit: '30',
       };
       if (search) params.search = search;
+      if (college) params.college = college;
       if (program) params.program = program;
       if (paymentStatus) params.paymentStatus = paymentStatus;
       if (eligibility) params.eligibility = eligibility;
@@ -37,8 +39,8 @@ export const AdminCandidates: React.FC = () => {
       if (qrGenerated) params.qrGenerated = qrGenerated;
 
       const res = await api.getCandidates(params);
-      setCandidates(res.candidates);
-      setPagination(res.pagination);
+      setCandidates(res.candidates || []);
+      setPagination(res.pagination || { total: 0, totalPages: 1 });
     } catch (err: any) {
       setError(err.message || 'Failed to fetch candidate list.');
     } finally {
@@ -48,10 +50,16 @@ export const AdminCandidates: React.FC = () => {
 
   useEffect(() => {
     fetchCandidates();
-  }, [page, search, program, paymentStatus, eligibility, attendance, qrGenerated]);
+  }, [page, search, college, program, paymentStatus, eligibility, attendance, qrGenerated]);
+
+  const isMatrusri = (c: any) => {
+    const col = (c.college || '').toLowerCase();
+    const id = (c.studentId || '').trim();
+    return col.includes('matrusri') || id.startsWith('1608');
+  };
 
   return (
-    <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+    <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6 text-slate-100">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-5">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
@@ -59,7 +67,7 @@ export const AdminCandidates: React.FC = () => {
             Candidate Master Directory
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Search, filter, and inspect official candidates, eligibility, and entrance check-in records.
+            Search, filter, and inspect registered candidates across MVSR and Matrusri institutions.
           </p>
         </div>
         <button
@@ -71,26 +79,34 @@ export const AdminCandidates: React.FC = () => {
         </button>
       </div>
 
-      <div className="bg-slate-800/80 backdrop-blur-xl border border-slate-700/80 rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 shadow-lg">
+      {/* Filter Bar */}
+      <div className="bg-slate-800/80 backdrop-blur-xl border border-slate-700/80 rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 shadow-lg">
         <div className="relative">
           <input
             type="text"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
-              // Clear other filters so search applies globally across all data
-              setProgram('');
-              setPaymentStatus('');
-              setEligibility('');
-              setAttendance('');
-              setQrGenerated('');
               setPage(1);
             }}
-            placeholder="Search ID, Name, Program..."
+            placeholder="Search ID, Name, Branch..."
             className="w-full bg-slate-900 border border-slate-700 text-white text-xs rounded-xl pl-9 pr-3 py-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
           />
           <Search className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
         </div>
+
+        <select
+          value={college}
+          onChange={(e) => {
+            setCollege(e.target.value);
+            setPage(1);
+          }}
+          className="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none font-semibold"
+        >
+          <option value="">🏛 All Colleges</option>
+          <option value="mvsr">🎓 MVSR Eng. College (2451)</option>
+          <option value="matrusri">🏛 Matrusri Eng. College (1608)</option>
+        </select>
 
         <select
           value={paymentStatus}
@@ -103,20 +119,6 @@ export const AdminCandidates: React.FC = () => {
           <option value="">All Payment Statuses</option>
           <option value="PAID">PAID</option>
           <option value="NOT_PAID">NOT PAID</option>
-          <option value="PARTIALLY_PAID">PARTIALLY PAID</option>
-        </select>
-
-        <select
-          value={eligibility}
-          onChange={(e) => {
-            setEligibility(e.target.value);
-            setPage(1);
-          }}
-          className="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-        >
-          <option value="">All Eligibility States</option>
-          <option value="true">ELIGIBLE Only</option>
-          <option value="false">NOT ELIGIBLE Only</option>
         </select>
 
         <select
@@ -127,7 +129,7 @@ export const AdminCandidates: React.FC = () => {
           }}
           className="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
         >
-          <option value="">All Attendance Statuses</option>
+          <option value="">All Attendance States</option>
           <option value="true">Attended</option>
           <option value="false">Not Attended</option>
         </select>
@@ -141,13 +143,14 @@ export const AdminCandidates: React.FC = () => {
           className="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
         >
           <option value="">All QR Statuses</option>
-          <option value="true">QR Generated</option>
+          <option value="true">Active QR Pass</option>
           <option value="false">No QR</option>
         </select>
 
         <button
           onClick={() => {
             setSearch('');
+            setCollege('');
             setProgram('');
             setPaymentStatus('');
             setEligibility('');
@@ -161,11 +164,12 @@ export const AdminCandidates: React.FC = () => {
         </button>
       </div>
 
+      {/* Roster Table */}
       <div className="bg-slate-800/80 backdrop-blur-xl border border-slate-700/80 rounded-3xl overflow-hidden shadow-xl">
         {loading ? (
           <div className="p-12 text-center text-slate-400 text-xs flex items-center justify-center gap-2">
             <RefreshCw className="w-5 h-5 animate-spin text-emerald-400" />
-            Loading candidates database...
+            Loading candidate roster...
           </div>
         ) : error ? (
           <div className="p-6 text-center text-rose-400 text-xs">{error}</div>
@@ -174,13 +178,13 @@ export const AdminCandidates: React.FC = () => {
             <table className="w-full text-left text-xs text-slate-300">
               <thead className="bg-slate-900/90 text-slate-400 uppercase tracking-wider text-[10px] font-bold border-b border-slate-700">
                 <tr>
-                  <th className="py-3.5 px-4">Student ID</th>
+                  <th className="py-3.5 px-4">Student ID / Roll No</th>
                   <th className="py-3.5 px-4">Candidate Name</th>
-                  <th className="py-3.5 px-4">Program</th>
-                  <th className="py-3.5 px-4">Payment Status</th>
-                  <th className="py-3.5 px-4">Eligibility</th>
-                  <th className="py-3.5 px-4">QR Token</th>
-                  <th className="py-3.5 px-4">Attendance</th>
+                  <th className="py-3.5 px-4">Institution / College</th>
+                  <th className="py-3.5 px-4">Branch / Program</th>
+                  <th className="py-3.5 px-4">Fee Status</th>
+                  <th className="py-3.5 px-4">QR Pass</th>
+                  <th className="py-3.5 px-4">Ceremony Check-in</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/60 font-medium">
@@ -191,37 +195,49 @@ export const AdminCandidates: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  candidates.map((c) => (
-                    <tr key={c.id} className="hover:bg-slate-700/40 transition-colors">
-                      <td className="py-3.5 px-4 font-mono font-bold text-white">{c.studentId}</td>
-                      <td className="py-3.5 px-4 font-semibold text-slate-200">{c.name}</td>
-                      <td className="py-3.5 px-4 text-slate-400">{c.program}</td>
-                      <td className="py-3.5 px-4">
-                        <StatusBadge status={c.normalizedPaymentStatus} />
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <StatusBadge status={c.eligibilityStatus ? 'ELIGIBLE' : 'NOT_ELIGIBLE'} />
-                      </td>
-                      <td className="py-3.5 px-4">
-                        {c.qrGenerated ? (
-                          <span className="text-emerald-400 font-semibold text-[11px] bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                            Active QR
+                  candidates.map((c) => {
+                    const matrusri = isMatrusri(c);
+                    return (
+                      <tr key={c.id} className="hover:bg-slate-700/40 transition-colors">
+                        <td className="py-3.5 px-4 font-mono font-bold text-white">{c.studentId}</td>
+                        <td className="py-3.5 px-4 font-semibold text-slate-100">{c.name}</td>
+                        <td className="py-3.5 px-4">
+                          <span
+                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                              matrusri
+                                ? 'bg-teal-500/10 text-teal-300 border-teal-500/30'
+                                : 'bg-blue-500/10 text-blue-300 border-blue-500/30'
+                            }`}
+                          >
+                            <GraduationCap className="w-3 h-3" />
+                            {matrusri ? 'Matrusri' : 'MVSR'}
                           </span>
-                        ) : (
-                          <span className="text-slate-500 text-[11px]">No QR</span>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        {c.attended ? (
-                          <span className="text-emerald-300 font-bold text-[11px] bg-emerald-500/20 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
-                            ✓ Attended
-                          </span>
-                        ) : (
-                          <span className="text-slate-500 text-[11px]">Not Attended</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-400">{c.program}</td>
+                        <td className="py-3.5 px-4">
+                          <StatusBadge status={c.normalizedPaymentStatus} />
+                        </td>
+                        <td className="py-3.5 px-4">
+                          {c.qrGenerated ? (
+                            <span className="text-emerald-400 font-semibold text-[11px] bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                              Active QR
+                            </span>
+                          ) : (
+                            <span className="text-slate-500 text-[11px]">No QR</span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          {c.attended ? (
+                            <span className="text-emerald-300 font-bold text-[11px] bg-emerald-500/20 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                              ✓ Attended
+                            </span>
+                          ) : (
+                            <span className="text-slate-500 text-[11px]">Not Attended</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

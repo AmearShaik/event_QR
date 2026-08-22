@@ -16,6 +16,7 @@ export interface CandidateDto {
   studentId: string;
   name: string;
   program: string;
+  college?: string;
   paymentStatus: string;
   normalizedPaymentStatus: NormalizedPaymentStatus;
   eligibilityStatus: boolean;
@@ -54,6 +55,7 @@ export interface AttendanceDto {
     studentId: string;
     name: string;
     program: string;
+    college?: string;
   };
   event?: {
     name: string;
@@ -80,6 +82,7 @@ export interface ScanResponse {
     studentId: string;
     name: string;
     program: string;
+    college?: string;
   };
   event?: string;
   entryTime?: string;
@@ -90,6 +93,7 @@ export interface ImportPreviewRow {
   studentId: string;
   name: string;
   program: string;
+  college?: string;
   paymentStatus: string;
   normalizedPaymentStatus: NormalizedPaymentStatus;
   eligibility: boolean;

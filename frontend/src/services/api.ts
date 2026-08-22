@@ -245,8 +245,9 @@ export const api = {
   },
 
   // Dashboard Live Analytics
-  getDashboardStats: async (): Promise<DashboardStats & { programBreakdown: any[] }> => {
-    const res = await safeFetch(`${getApiBaseUrl()}/admin/dashboard/stats`, {
+  getDashboardStats: async (college?: string): Promise<DashboardStats & { programBreakdown: any[]; collegeBreakdown?: any[]; availableColleges?: string[] }> => {
+    const query = college && college !== 'all' ? `?college=${encodeURIComponent(college)}` : '';
+    const res = await safeFetch(`${getApiBaseUrl()}/admin/dashboard/stats${query}`, {
       headers: { ...getAuthHeader() },
     });
     const data = await handleResponse(res, 'Failed to fetch dashboard stats.');

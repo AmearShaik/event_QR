@@ -22,6 +22,7 @@ model Candidate {
   studentId               String       @unique
   name                    String
   program                 String
+  college                 String       @default("MVSR Engineering College") // e.g. "MVSR Engineering College", "Matrusri Engineering College"
   paymentStatus           String
   normalizedPaymentStatus String       // PAID, NOT_PAID, PARTIALLY_PAID
   eligibilityStatus       Boolean      @default(false)

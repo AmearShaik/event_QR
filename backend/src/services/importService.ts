@@ -3,6 +3,7 @@ import * as xlsx from 'xlsx';
 import { parse as parseCsv } from 'csv-parse/sync';
 import { EligibilityService } from './eligibilityService';
 import { ImportPreviewRow, ImportPreviewResponse, ImportConfirmResponse } from '../types';
+import { detectCollege } from '../utils/collegeUtils';
 
 const prisma = new PrismaClient();
 
@@ -10,6 +11,7 @@ export interface ParsedRowData {
   studentId: string;
   name: string;
   program: string;
+  college: string;
   paymentStatus: string;
 }
 
@@ -32,7 +34,7 @@ export class ImportService {
         });
 
         for (const rec of records) {
-          const row = this.extractRowData(rec);
+          const row = this.extractRowData(rec, originalFilename);
           if (row.studentId) {
             rows.push(row);
           }
@@ -47,7 +49,7 @@ export class ImportService {
           const cells = lines[i].split(',').map((c) => c.trim().replace(/^["']|["']$/g, ''));
           const cleanCells = cells.map((c) => c.toLowerCase().replace(/[^a-z0-9]/g, ''));
           const hasId = cleanCells.some((c) => ['rollno', 'roll', 'studentid', 'student', 'hallticket', 'sno', 'slno', 'id'].includes(c));
-          const hasName = cleanCells.some((c) => ['name', 'candidatename', 'studentname'].includes(c));
+          const hasName = cleanCells.some((c) => ['name', 'candidatename', 'studentname', 'nameofthestudent'].includes(c));
           if (hasId && hasName) {
             headerIndex = i;
             headers = cells;
@@ -62,7 +64,7 @@ export class ImportService {
             headers.forEach((h, idx) => {
               if (h) rec[h] = cells[idx] || '';
             });
-            const row = this.extractRowData(rec);
+            const row = this.extractRowData(rec, originalFilename);
             if (row.studentId) rows.push(row);
           }
         }
@@ -78,12 +80,21 @@ export class ImportService {
         let headerRowIndex = -1;
         let headers: string[] = [];
 
+        // Check first few rows for header title keywords (e.g. MATRUSRI, MVSR)
+        let sheetTitle = `${originalFilename} ${sheetName}`;
+        for (let r = 0; r < Math.min(5, grid.length); r++) {
+          const rowStr = (grid[r] || []).join(' ');
+          if (rowStr.toLowerCase().includes('matrusri') || rowStr.toLowerCase().includes('mvsr')) {
+            sheetTitle += ` ${rowStr}`;
+          }
+        }
+
         for (let r = 0; r < Math.min(15, grid.length); r++) {
           const row = grid[r];
           if (!Array.isArray(row)) continue;
           const cleanCells = row.map((c) => String(c).toLowerCase().replace(/[^a-z0-9]/g, ''));
           const hasId = cleanCells.some((c) => ['rollno', 'roll', 'studentid', 'student_id', 'hallticket', 'regno', 'sno', 'slno', 'id'].includes(c));
-          const hasName = cleanCells.some((c) => ['name', 'candidatename', 'studentname', 'sname'].includes(c));
+          const hasName = cleanCells.some((c) => ['name', 'candidatename', 'studentname', 'nameofthestudent', 'sname'].includes(c));
           if (hasId && hasName) {
             headerRowIndex = r;
             headers = row.map((h) => String(h).trim());
@@ -100,7 +111,7 @@ export class ImportService {
             headers.forEach((h, idx) => {
               if (h) rec[h] = row[idx] !== undefined && row[idx] !== null ? String(row[idx]).trim() : '';
             });
-            const parsed = this.extractRowData(rec);
+            const parsed = this.extractRowData(rec, sheetTitle);
             if (parsed.studentId) {
               currentSheetRows.push(parsed);
             }
@@ -117,7 +128,7 @@ export class ImportService {
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
         const jsonRows = xlsx.utils.sheet_to_json<Record<string, any>>(firstSheet, { defval: '' });
         for (const rec of jsonRows) {
-          const parsed = this.extractRowData(rec);
+          const parsed = this.extractRowData(rec, originalFilename);
           if (parsed.studentId) bestRows.push(parsed);
         }
       }
@@ -129,9 +140,9 @@ export class ImportService {
   }
 
   /**
-   * Maps dynamic header names (e.g. Roll No, Student ID, Name, Course, Branch, Status, Payment Status)
+   * Maps dynamic header names (e.g. Roll No, Student ID, Name of the Student, Branch, Classification, Payment Status)
    */
-  private static extractRowData(rec: Record<string, any>): ParsedRowData {
+  private static extractRowData(rec: Record<string, any>, contextHint?: string): ParsedRowData {
     const keys = Object.keys(rec);
     const findValue = (possibleHeaders: string[]): string => {
       for (const header of possibleHeaders) {
@@ -144,8 +155,30 @@ export class ImportService {
       return '';
     };
 
-    const studentId = findValue(['roll no', 'rollno', 'student id', 'studentid', 'student_id', 'hallticket', 'hall ticket', 'regno', 'reg no', 'id']);
-    const name = findValue(['candidate name', 'candidatename', 'name', 'student name', 'studentname', 'sname']);
+    const studentId = findValue([
+      'roll no',
+      'rollno',
+      'roll no.',
+      'student id',
+      'studentid',
+      'student_id',
+      'hallticket',
+      'hall ticket',
+      'regno',
+      'reg no',
+      'id'
+    ]);
+
+    const name = findValue([
+      'name of the student',
+      'nameofthestudent',
+      'candidate name',
+      'candidatename',
+      'name',
+      'student name',
+      'studentname',
+      'sname'
+    ]);
     
     // Combine Course and Branch if both exist
     const course = findValue(['course', 'program', 'degree', 'be', 'btech', 'ug']);
@@ -159,7 +192,7 @@ export class ImportService {
       program = branch;
     }
 
-    const paymentStatus = findValue([
+    let paymentStatus = findValue([
       'status',
       'payment status',
       'paymentstatus',
@@ -168,10 +201,21 @@ export class ImportService {
       'paid status',
       'registaration fee status',
       'registration fee status',
-      'reg fee status'
+      'reg fee status',
+      'classification',
+      'division',
+      'grade'
     ]);
 
-    return { studentId, name, program, paymentStatus };
+    // If classification is given without explicit payment status, default to 'Paid'
+    if (!paymentStatus || paymentStatus.toLowerCase() === 'distinction' || paymentStatus.toLowerCase().includes('class')) {
+      paymentStatus = 'Paid';
+    }
+
+    // Auto-detect College based on Student ID prefix or Context Hint
+    const college = detectCollege(studentId, contextHint);
+
+    return { studentId, name, program, college, paymentStatus };
   }
 
   /**
@@ -190,6 +234,7 @@ export class ImportService {
       const name = row.name;
       const paymentStatus = row.paymentStatus;
       const program = row.program;
+      const college = row.college || detectCollege(studentId);
 
       const { normalizedStatus, correctedSpelling } = EligibilityService.normalizePaymentStatus(paymentStatus);
       const eligibility = EligibilityService.calculateEligibility(normalizedStatus);
@@ -209,7 +254,7 @@ export class ImportService {
         error = 'Missing Candidate Name';
         isValid = false;
       } else if (!paymentStatus) {
-        warning = 'Missing payment status; defaulted to NOT_PAID';
+        warning = 'Missing payment status; defaulted to PAID';
       }
 
       if (correctedSpelling) {
@@ -232,6 +277,7 @@ export class ImportService {
         studentId: studentId || 'N/A',
         name: name || 'N/A',
         program,
+        college,
         paymentStatus,
         normalizedPaymentStatus: normalizedStatus,
         eligibility,
@@ -282,6 +328,7 @@ export class ImportService {
           const existing = existingMap.get(row.studentId);
           const normalizedStatus = row.normalizedPaymentStatus;
           const isEligible = EligibilityService.calculateEligibility(normalizedStatus);
+          const college = row.college || detectCollege(row.studentId);
 
           if (!existing) {
             await prisma.candidate.create({
@@ -289,6 +336,7 @@ export class ImportService {
                 studentId: row.studentId,
                 name: row.name,
                 program: row.program,
+                college,
                 paymentStatus: row.paymentStatus,
                 normalizedPaymentStatus: normalizedStatus,
                 eligibilityStatus: isEligible,
@@ -300,6 +348,7 @@ export class ImportService {
             const hasChanged =
               existing.name !== row.name ||
               existing.program !== row.program ||
+              existing.college !== college ||
               existing.normalizedPaymentStatus !== normalizedStatus;
 
             if (hasChanged) {
@@ -308,6 +357,7 @@ export class ImportService {
                 data: {
                   name: row.name,
                   program: row.program,
+                  college,
                   paymentStatus: row.paymentStatus,
                   normalizedPaymentStatus: normalizedStatus,
                   eligibilityStatus: isEligible,
