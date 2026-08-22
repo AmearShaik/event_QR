@@ -11,14 +11,26 @@ export class PasswordUtils {
   }
 
   /**
-   * Verifies password against stored salt:hash format.
+   * Verifies password against stored hash (supports PBKDF2, direct compare, and legacy formats).
    */
   static verifyPassword(password: string, storedHash: string): boolean {
-    if (!storedHash || !storedHash.includes(':')) {
+    if (!storedHash) {
       return false;
     }
-    const [salt, originalHash] = storedHash.split(':');
-    const hash = crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
-    return hash === originalHash;
+
+    // 1. Check direct match (fallback)
+    if (storedHash === password) {
+      return true;
+    }
+
+    // 2. Check PBKDF2 format (salt:hash)
+    if (storedHash.includes(':')) {
+      const [salt, originalHash] = storedHash.split(':');
+      if (!salt || !originalHash) return false;
+      const hash = crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
+      return hash === originalHash;
+    }
+
+    return false;
   }
 }
