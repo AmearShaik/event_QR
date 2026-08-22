@@ -16,50 +16,61 @@ export class AuthController {
       const inputUsername = username.trim().toLowerCase();
       const inputPassword = password.trim();
 
-      // Look up user by exact username or alias
-      let user = await prisma.user.findFirst({
-        where: {
-          OR: [
-            { username: inputUsername },
-            { username: inputUsername === 'admin' ? 'admin@graduation.edu' : inputUsername },
-          ],
-        },
-      });
-
       const defaultAdminUser = (process.env.DEFAULT_ADMIN_USERNAME || 'admin@graduation.edu').trim().toLowerCase();
       const defaultAdminPass = process.env.DEFAULT_ADMIN_PASSWORD || 'admin@2026';
 
-      // If user not in DB yet, but matches default admin credentials, auto-create
-      if (!user) {
-        if (
-          (inputUsername === defaultAdminUser || inputUsername === 'admin') &&
-          inputPassword === defaultAdminPass
-        ) {
+      // 1. Bulletproof master admin check
+      if (
+        (inputUsername === defaultAdminUser || inputUsername === 'admin' || inputUsername === 'admin@graduation.edu') &&
+        inputPassword === defaultAdminPass
+      ) {
+        let adminUser = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { username: 'admin@graduation.edu' },
+              { username: 'admin' },
+            ],
+          },
+        });
+
+        if (!adminUser) {
           const passwordHash = PasswordUtils.hashPassword(defaultAdminPass);
-          user = await prisma.user.upsert({
-            where: { username: defaultAdminUser },
+          adminUser = await prisma.user.upsert({
+            where: { username: 'admin@graduation.edu' },
             update: { passwordHash, role: 'ADMIN', name: 'Graduation Admin' },
-            create: { username: defaultAdminUser, passwordHash, role: 'ADMIN', name: 'Graduation Admin' },
+            create: { username: 'admin@graduation.edu', passwordHash, role: 'ADMIN', name: 'Graduation Admin' },
           });
-        } else {
-          return res.status(401).json({ error: 'Invalid username or password.' });
         }
+
+        const token = JwtUtils.signToken({
+          userId: adminUser.id,
+          username: adminUser.username,
+          role: adminUser.role,
+        });
+
+        return res.json({
+          message: 'Login successful.',
+          token,
+          user: {
+            id: adminUser.id,
+            username: adminUser.username,
+            name: adminUser.name,
+            role: adminUser.role,
+          },
+        });
+      }
+
+      // 2. Standard user lookup
+      let user = await prisma.user.findUnique({
+        where: { username: inputUsername },
+      });
+
+      if (!user) {
+        return res.status(401).json({ error: 'Invalid username or password.' });
       }
 
       // Verify password
-      let isMatch = PasswordUtils.verifyPassword(inputPassword, user.passwordHash);
-
-      // Check fallback to default credentials
-      if (!isMatch && (inputUsername === defaultAdminUser || inputUsername === 'admin') && inputPassword === defaultAdminPass) {
-        isMatch = true;
-        // Update hash in background
-        const newHash = PasswordUtils.hashPassword(defaultAdminPass);
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { passwordHash: newHash },
-        }).catch(() => {});
-      }
-
+      const isMatch = PasswordUtils.verifyPassword(inputPassword, user.passwordHash);
       if (!isMatch) {
         return res.status(401).json({ error: 'Invalid username or password.' });
       }

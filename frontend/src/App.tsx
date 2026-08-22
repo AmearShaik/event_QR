@@ -16,9 +16,9 @@ const ProtectedAdminRoute: React.FC<{ children: React.ReactNode }> = ({ children
 
   if (isLoading) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-slate-900 text-slate-400 text-xs font-semibold">
+      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-[#f8fbff] text-slate-500 text-xs font-semibold">
         <div className="flex items-center gap-2">
-          <span className="w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></span>
+          <span className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></span>
           <span>Verifying session...</span>
         </div>
       </div>
@@ -37,9 +37,9 @@ const RootRedirect: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-slate-900 text-slate-400 text-xs font-semibold">
+      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-[#f8fbff] text-slate-500 text-xs font-semibold">
         <div className="flex items-center gap-2">
-          <span className="w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></span>
+          <span className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></span>
           <span>Loading portal...</span>
         </div>
       </div>
@@ -61,7 +61,7 @@ export const App: React.FC = () => {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans">
+        <div className="min-h-screen bg-[#f8fbff] text-slate-900 flex flex-col font-sans">
           <Navbar />
           <main className="flex-1">
             <Routes>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -10,7 +10,6 @@ import {
   ClipboardList,
   Calendar,
   LogOut,
-  LogIn,
   ShieldCheck,
   Power,
   UserCheck,
@@ -19,7 +18,12 @@ import {
 export const Navbar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { role, adminUser, studentSession, logout } = useAuth();
+  const { role, studentSession, logout } = useAuth();
+
+  // Hide navbar on login / unauthenticated root page for a clean full-screen view
+  if (!role && (location.pathname === '/' || location.pathname === '/login')) {
+    return null;
+  }
 
   const adminNavItems = [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -42,33 +46,32 @@ export const Navbar: React.FC = () => {
   };
 
   return (
-    <>
-      <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <Link to={getHomePath()} className="flex items-center gap-3 group">
-                <div className="w-10 h-10 rounded-xl overflow-hidden bg-white p-0.5 shadow-lg shadow-emerald-500/10 group-hover:scale-105 transition-transform flex-shrink-0">
-                  <img
-                    src="/mvsr-logo.png"
-                    alt="MVSR Engineering College"
-                    className="w-full h-full object-contain"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                      e.currentTarget.parentElement!.innerHTML = '<span class="w-full h-full flex items-center justify-center text-emerald-600 font-black text-xs">MVSR</span>';
-                    }}
-                  />
-                </div>
-                <div>
-                  <span className="font-extrabold text-base text-white tracking-tight group-hover:text-emerald-400 transition-colors">
-                    MVSR Engineering College
-                  </span>
-                  <span className="text-[10px] text-slate-400 block font-medium">
-                    Graduation Day 2026 · Gate Pass System
-                  </span>
-                </div>
-              </Link>
-            </div>
+    <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 text-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          <div className="flex items-center gap-3">
+            <Link to={getHomePath()} className="flex items-center gap-3 group">
+              <div className="w-10 h-10 rounded-xl overflow-hidden bg-white p-0.5 shadow-lg shadow-emerald-500/10 group-hover:scale-105 transition-transform flex-shrink-0">
+                <img
+                  src="/mvsr-logo.png"
+                  alt="MVSR Engineering College"
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.parentElement!.innerHTML = '<span class="w-full h-full flex items-center justify-center text-emerald-600 font-black text-xs">MVSR</span>';
+                  }}
+                />
+              </div>
+              <div>
+                <span className="font-extrabold text-sm sm:text-base text-white tracking-tight group-hover:text-emerald-400 transition-colors">
+                  MVSR Engineering College
+                </span>
+                <span className="text-[10px] text-slate-400 block font-medium">
+                  Graduation Day 2026 · Gate Pass System
+                </span>
+              </div>
+            </Link>
+          </div>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-2">
@@ -142,7 +145,6 @@ export const Navbar: React.FC = () => {
                 </button>
               </>
             )}
-
           </nav>
 
           {/* Mobile Auth Actions */}
@@ -161,7 +163,7 @@ export const Navbar: React.FC = () => {
         </div>
       </div>
 
-      {/* Mobile Navigation Links (Only shown when authenticated) */}
+      {/* Mobile Navigation Links */}
       {role && (
         <div className="md:hidden border-t border-slate-800 px-2 py-2 flex items-center justify-around overflow-x-auto">
           {role === 'ADMIN' &&
@@ -201,7 +203,5 @@ export const Navbar: React.FC = () => {
         </div>
       )}
     </header>
-
-  </>
   );
 };
