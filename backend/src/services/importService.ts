@@ -11,7 +11,7 @@ export interface ParsedRowData {
   studentId: string;
   name: string;
   program: string;
-  college: string;
+  college?: string;
   paymentStatus: string;
 }
 
