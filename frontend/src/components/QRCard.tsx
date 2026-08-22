@@ -4,7 +4,6 @@ import { Download, CheckCircle2, GraduationCap, ShieldCheck } from './Icons';
 import { StatusBadge } from './StatusBadge';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Media } from '@capacitor-community/media';
-import { Share } from '@capacitor/share';
 
 interface QRCardProps {
   candidate: {
@@ -155,78 +154,44 @@ export const QRCard: React.FC<QRCardProps> = ({ candidate, event, token }) => {
       }
 
       const fileName = `GraduationPass_${candidate.studentId.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
-      const dataUrl = canvas.toDataURL('image/png');
-      const base64Raw = dataUrl.split(',')[1];
       const isNative = Boolean(
-        (window as any).Capacitor?.isNativePlatform?.() ||
-        (window as any).Capacitor !== undefined ||
-        window.location.protocol === 'capacitor:'
+        typeof window !== 'undefined' &&
+        (window as any).Capacitor?.isNativePlatform?.()
       );
 
-      // ── A. NATIVE CAPACITOR (ANDROID / IOS APP) ──
+      // ── A. NATIVE CAPACITOR APP (ANDROID / IOS ONLY) ──
       if (isNative) {
         try {
-          // 1. Write file to device storage
+          const dataUrl = canvas.toDataURL('image/png');
+          const base64Raw = dataUrl.split(',')[1];
+
           const savedFile = await Filesystem.writeFile({
             path: fileName,
             data: base64Raw,
             directory: Directory.Cache,
           });
 
-          // 2. Save directly to Android/iOS Photo Gallery
-          try {
-            await Media.savePhoto({
-              path: savedFile.uri,
-              albumIdentifier: 'Graduation Day Passes',
-            });
-            showToast('✓ Saved directly to Photo Gallery!');
-          } catch (mediaErr) {
-            console.warn('[Media Save Warning, fallback to Share]', mediaErr);
-            // Fallback to Native System Share / Save Image dialog
-            await Share.share({
-              title: 'Graduation Pass 2026',
-              text: `Graduation Day Pass for ${candidate.name} (${candidate.studentId})`,
-              url: savedFile.uri,
-              dialogTitle: 'Save QR Pass to Gallery / Share',
-            });
-            showToast('Pass ready in gallery/share sheet!');
-          }
+          await Media.savePhoto({
+            path: savedFile.uri,
+            albumIdentifier: 'Graduation Day Passes',
+          });
+
+          showToast('✓ QR Pass saved to Gallery!');
           setDownloading(false);
           return;
         } catch (nativeErr: any) {
-          console.error('[Native Save Error]', nativeErr);
+          console.warn('[Native Save Notice, falling back to download]', nativeErr);
         }
       }
 
-      // ── B. MOBILE BROWSER WEB SHARE API (CHROME / SAFARI) ──
-      canvas.toBlob(async (blob) => {
+      // ── B. DIRECT BROWSER IMAGE DOWNLOAD (WEB & MOBILE BROWSER) ──
+      canvas.toBlob((blob) => {
         if (!blob) {
-          showToast('Could not convert canvas to image.');
+          showToast('Error saving QR Pass.');
           setDownloading(false);
           return;
         }
 
-        const file = new File([blob], fileName, { type: 'image/png' });
-
-        // If Web Share with files is supported (Android Chrome / iOS Safari)
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          try {
-            await navigator.share({
-              title: 'Graduation Day Pass 2026',
-              text: `Graduation Day 2026 Pass for ${candidate.name}`,
-              files: [file],
-            });
-            showToast('Pass saved / shared successfully!');
-            setDownloading(false);
-            return;
-          } catch (shareErr: any) {
-            if (shareErr.name !== 'AbortError') {
-              console.warn('[Web Share Warning]', shareErr);
-            }
-          }
-        }
-
-        // ── C. STANDARD BROWSER DOWNLOAD FALLBACK ──
         const blobUrl = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = blobUrl;
@@ -234,14 +199,14 @@ export const QRCard: React.FC<QRCardProps> = ({ candidate, event, token }) => {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 3000);
 
-        showToast('✓ QR Pass downloaded to your device!');
+        showToast('✓ QR Pass downloaded successfully!');
         setDownloading(false);
       }, 'image/png');
     } catch (err: any) {
       console.error('[Download QR Error]', err);
-      showToast('Error saving QR Pass. Please screenshot your pass.');
+      showToast('Error downloading QR Pass. Please screenshot your pass.');
       setDownloading(false);
     }
   };
@@ -324,7 +289,7 @@ export const QRCard: React.FC<QRCardProps> = ({ candidate, event, token }) => {
         {downloading ? (
           <>
             <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
-            <span>Saving Pass...</span>
+            <span>Downloading Pass...</span>
           </>
         ) : (
           <>
