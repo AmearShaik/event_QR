@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
+import { PasswordUtils } from '../src/utils/password';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -8,10 +8,10 @@ const prisma = new PrismaClient();
 
 async function main() {
   const username = process.env.DEFAULT_ADMIN_USERNAME || 'admin@graduation.edu';
-  const password = process.env.DEFAULT_ADMIN_PASSWORD || 'Admin@2026Password!';
+  const password = process.env.DEFAULT_ADMIN_PASSWORD || 'admin@2026';
   const name = process.env.DEFAULT_ADMIN_NAME || 'Graduation Admin';
 
-  const passwordHash = await bcrypt.hash(password, 10);
+  const passwordHash = PasswordUtils.hashPassword(password);
 
   const admin = await prisma.user.upsert({
     where: { username: username.toLowerCase() },

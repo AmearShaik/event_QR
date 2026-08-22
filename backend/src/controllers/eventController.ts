@@ -5,6 +5,7 @@ const prisma = new PrismaClient();
 
 export class EventController {
   static async listEvents(req: Request, res: Response) {
+    console.log(`[Event API] Fetching all events. IP: ${req.ip}`);
     try {
       const events = await prisma.event.findMany({
         orderBy: { createdAt: 'desc' },
@@ -17,7 +18,7 @@ export class EventController {
 
   static async createEvent(req: Request, res: Response) {
     try {
-      const { name, description, slug } = req.body;
+      const { name, description, slug, requiresPayment } = req.body;
       if (!name) {
         return res.status(400).json({ error: 'Event name is required.' });
       }
@@ -32,6 +33,7 @@ export class EventController {
           description: description ? description.trim() : null,
           slug: generatedSlug,
           isActive: true,
+          requiresPayment: Boolean(requiresPayment), // false=entrance(all), true=kit allocation(paid only)
         },
       });
 
@@ -44,7 +46,7 @@ export class EventController {
   static async updateEvent(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { name, description, isActive } = req.body;
+      const { name, description, isActive, requiresPayment } = req.body;
 
       const event = await prisma.event.update({
         where: { id },
@@ -52,6 +54,7 @@ export class EventController {
           ...(name && { name: name.trim() }),
           ...(description !== undefined && { description }),
           ...(isActive !== undefined && { isActive }),
+          ...(requiresPayment !== undefined && { requiresPayment: Boolean(requiresPayment) }),
         },
       });
 

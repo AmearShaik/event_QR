@@ -125,9 +125,11 @@ export class CandidateController {
    * Instantly verifies eligibility & generates/retrieves active QR pass.
    */
   static async studentLogin(req: Request, res: Response) {
+    console.log(`[Student Login Hit] IP: ${req.ip}, Body:`, req.body);
     try {
       const { studentId, password } = req.body;
       if (!studentId || !password) {
+        console.log(`[Student Login Failed] Missing studentId or password`);
         return res.status(400).json({ error: 'User ID (Roll Number) and Password are required.' });
       }
 
@@ -136,11 +138,13 @@ export class CandidateController {
 
       // Student Roll Number acts as both User ID and Password
       if (trimmedId.toLowerCase() !== trimmedPass.toLowerCase()) {
+        console.log(`[Student Login Failed] Password mismatch for ID: "${trimmedId}"`);
         return res.status(401).json({
           error: 'Invalid Password. For student login, your Roll Number is your User ID and Password.',
         });
       }
 
+      console.log(`[Student Login] Searching for student: "${trimmedId}"`);
       const candidate = await prisma.candidate.findUnique({
         where: { studentId: trimmedId },
       });

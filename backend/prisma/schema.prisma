@@ -33,15 +33,16 @@ model Candidate {
 }
 
 model Event {
-  id          String       @id @default(uuid())
-  slug        String       @unique // e.g. "attendance"
-  name        String
-  description String?
-  isActive    Boolean      @default(true)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  qrTokens    QrToken[]
-  attendances Attendance[]
+  id               String       @id @default(uuid())
+  slug             String       @unique // e.g. "attendance"
+  name             String
+  description      String?
+  isActive         Boolean      @default(true)
+  requiresPayment  Boolean      @default(false) // false = entrance (all), true = kit allocation (paid only)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  qrTokens         QrToken[]
+  attendances      Attendance[]
 }
 
 model QrToken {

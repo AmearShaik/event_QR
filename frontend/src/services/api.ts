@@ -316,7 +316,7 @@ export const api = {
     return handleResponse(res, 'Failed to fetch ceremony events.');
   },
 
-  createEvent: async (eventData: { name: string; slug: string; description?: string }) => {
+  createEvent: async (eventData: { name: string; slug: string; description?: string; requiresPayment?: boolean }) => {
     const res = await safeFetch(`${getApiBaseUrl()}/admin/events`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
@@ -325,7 +325,7 @@ export const api = {
     return handleResponse(res, 'Failed to create event.');
   },
 
-  updateEvent: async (id: string, updateData: { name?: string; description?: string; isActive?: boolean }) => {
+  updateEvent: async (id: string, updateData: { name?: string; description?: string; isActive?: boolean; requiresPayment?: boolean }) => {
     const res = await safeFetch(`${getApiBaseUrl()}/admin/events/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', ...getAuthHeader() },

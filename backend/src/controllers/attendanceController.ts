@@ -9,10 +9,12 @@ export class AttendanceController {
    * Endpoint: POST /api/attendance/scan
    */
   static async scan(req: Request, res: Response) {
+    console.log(`[QR Scan Hit] IP: ${req.ip}, Body:`, req.body);
     try {
       const { token, qrToken, eventId } = req.body;
       const actualToken = token || qrToken;
       if (!actualToken) {
+        console.log(`[QR Scan Failed] Missing QR token`);
         return res.status(400).json({ status: 'INVALID', message: 'QR token is required.' });
       }
 
@@ -23,7 +25,9 @@ export class AttendanceController {
         targetEventId = activeEvent ? activeEvent.id : 'attendance';
       }
 
+      console.log(`[QR Scan] Processing token for event: ${targetEventId}`);
       const result = await AttendanceService.scanQrToken(actualToken, targetEventId);
+      console.log(`[QR Scan Result]`, result);
       return res.json(result);
     } catch (err: any) {
       return res.status(500).json({

@@ -76,7 +76,22 @@ export class AttendanceService {
       };
     }
 
-    // Removed payment and eligibility checks to allow all students to enter.
+    // Step 6: Payment check — only enforced when event.requiresPayment is true (e.g. Kit Allocation)
+    //         Entrance events have requiresPayment=false, so all students pass freely.
+    if (event.requiresPayment) {
+      if (candidate.normalizedPaymentStatus !== 'PAID') {
+        return {
+          status: 'NOT_ELIGIBLE',
+          message: 'Kit allocation is reserved for paid candidates only.',
+          candidate: {
+            studentId: candidate.studentId,
+            name: candidate.name,
+            program: candidate.program,
+          },
+          event: event.name,
+        };
+      }
+    }
 
     // Step 7: Duplicate check before insertion
     const existingAttendance = await prisma.attendance.findUnique({

@@ -12,20 +12,14 @@ import {
   LogOut,
   LogIn,
   ShieldCheck,
-  Server,
-  Wifi,
   Power,
   UserCheck,
 } from './Icons';
-import { ServerConfigModal } from './ServerConfigModal';
-import { api } from '../services/api';
 
 export const Navbar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { role, adminUser, studentSession, logout } = useAuth();
-  const [showServerModal, setShowServerModal] = useState<boolean>(false);
-  const isServerConfigured = api.isCustomServerSet();
 
   const adminNavItems = [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -54,15 +48,23 @@ export const Navbar: React.FC = () => {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
               <Link to={getHomePath()} className="flex items-center gap-3 group">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-emerald-400 flex items-center justify-center text-slate-950 font-bold shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
-                  <GraduationCap className="w-6 h-6" />
+                <div className="w-10 h-10 rounded-xl overflow-hidden bg-white p-0.5 shadow-lg shadow-emerald-500/10 group-hover:scale-105 transition-transform flex-shrink-0">
+                  <img
+                    src="/mvsr-logo.png"
+                    alt="MVSR Engineering College"
+                    className="w-full h-full object-contain"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      e.currentTarget.parentElement!.innerHTML = '<span class="w-full h-full flex items-center justify-center text-emerald-600 font-black text-xs">MVSR</span>';
+                    }}
+                  />
                 </div>
                 <div>
                   <span className="font-extrabold text-base text-white tracking-tight group-hover:text-emerald-400 transition-colors">
-                    Graduation 2026
+                    MVSR Engineering College
                   </span>
                   <span className="text-[10px] text-slate-400 block font-medium">
-                    Pass & Gate Attendance System
+                    Graduation Day 2026 · Gate Pass System
                   </span>
                 </div>
               </Link>
@@ -141,19 +143,6 @@ export const Navbar: React.FC = () => {
               </>
             )}
 
-            {/* Server Settings Icon */}
-            <div className="h-6 w-px bg-slate-800 mx-1" />
-            <button
-              onClick={() => setShowServerModal(true)}
-              className="flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-emerald-300 hover:bg-slate-800/80 transition-all cursor-pointer relative"
-              title="Server & Backend Connection Settings"
-            >
-              <Server className="w-4 h-4" />
-              <span className="hidden lg:inline text-[11px]">Server</span>
-              {isServerConfigured && (
-                <span className="w-2 h-2 rounded-full bg-emerald-400 absolute top-1.5 right-1.5 ring-2 ring-slate-900" />
-              )}
-            </button>
           </nav>
 
           {/* Mobile Auth Actions */}
@@ -213,11 +202,6 @@ export const Navbar: React.FC = () => {
       )}
     </header>
 
-    {/* Server Configuration Modal */}
-    <ServerConfigModal
-      isOpen={showServerModal}
-      onClose={() => setShowServerModal(false)}
-    />
   </>
   );
 };

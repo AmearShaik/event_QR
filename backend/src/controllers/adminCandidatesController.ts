@@ -5,6 +5,7 @@ const prisma = new PrismaClient();
 
 export class AdminCandidatesController {
   static async listCandidates(req: Request, res: Response) {
+    console.log(`[Admin] Fetching candidates list. IP: ${req.ip}, Query:`, req.query);
     try {
       const {
         search,
