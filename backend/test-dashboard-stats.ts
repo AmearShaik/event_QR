@@ -4,7 +4,7 @@ dotenv.config();
 
 const prisma = new PrismaClient();
 
-async function test(college: string) {
+async function testStats(college: string) {
   const collegeConditions: any[] = [];
   if (college && college !== 'all') {
     if (college === 'mvsr') {
@@ -25,8 +25,37 @@ async function test(college: string) {
   }
 
   const baseWhere = collegeConditions.length > 0 ? { AND: collegeConditions } : {};
-  const paidCondition = { AND: [...collegeConditions, { normalizedPaymentStatus: 'PAID' }] };
-  const unpaidCondition = { AND: [...collegeConditions, { normalizedPaymentStatus: { in: ['NOT_PAID', 'PARTIALLY_PAID'] } }] };
+
+  const paidCondition = {
+    AND: [
+      ...collegeConditions,
+      {
+        OR: [
+          { normalizedPaymentStatus: 'PAID' },
+          { paymentStatus: { contains: 'Paid', mode: 'insensitive' } },
+        ],
+      },
+      {
+        NOT: [
+          { paymentStatus: { contains: 'Not', mode: 'insensitive' } },
+          { paymentStatus: { contains: 'Unpaid', mode: 'insensitive' } },
+        ],
+      },
+    ],
+  };
+
+  const unpaidCondition = {
+    AND: [
+      ...collegeConditions,
+      {
+        OR: [
+          { normalizedPaymentStatus: { in: ['NOT_PAID', 'PARTIALLY_PAID'] } },
+          { paymentStatus: { contains: 'Not', mode: 'insensitive' } },
+          { paymentStatus: { contains: 'Unpaid', mode: 'insensitive' } },
+        ],
+      },
+    ],
+  };
 
   const [total, paid, unpaid] = await Promise.all([
     prisma.candidate.count({ where: baseWhere }),
@@ -34,15 +63,15 @@ async function test(college: string) {
     prisma.candidate.count({ where: unpaidCondition }),
   ]);
 
-  console.log(`[${college.toUpperCase().padEnd(8)}] Total: ${total} | Paid: ${paid} | Unpaid: ${unpaid} | Sum (Paid+Unpaid): ${paid + unpaid}`);
+  console.log(`[College: ${college.toUpperCase()}] Total: ${total} | Paid: ${paid} | Unpaid: ${unpaid}`);
 }
 
 async function main() {
-  console.log('\n--- VERIFYING EXACT DASHBOARD COUNTS ---\n');
-  await test('all');
-  await test('mvsr');
-  await test('matrusri');
-  console.log('\n----------------------------------------\n');
+  console.log('\n--- TESTING DASHBOARD COLLEGE STATS ---\n');
+  await testStats('all');
+  await testStats('mvsr');
+  await testStats('matrusri');
+  console.log('\n---------------------------------------\n');
 }
 
 main().finally(() => prisma.$disconnect());

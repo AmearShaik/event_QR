@@ -35,19 +35,34 @@ export class DashboardController {
 
       const baseCandidateWhere = collegeConditions.length > 0 ? { AND: collegeConditions } : {};
 
-      // Strictly PAID candidates (normalized)
       const paidCondition = {
         AND: [
           ...collegeConditions,
-          { normalizedPaymentStatus: 'PAID' },
+          {
+            OR: [
+              { normalizedPaymentStatus: 'PAID' },
+              { paymentStatus: { contains: 'Paid', mode: 'insensitive' } },
+            ],
+          },
+          {
+            NOT: [
+              { paymentStatus: { contains: 'Not', mode: 'insensitive' } },
+              { paymentStatus: { contains: 'Unpaid', mode: 'insensitive' } },
+            ],
+          },
         ],
       };
 
-      // Strictly UNPAID / PARTIALLY PAID candidates (normalized)
       const unpaidCondition = {
         AND: [
           ...collegeConditions,
-          { normalizedPaymentStatus: { in: ['NOT_PAID', 'PARTIALLY_PAID'] } },
+          {
+            OR: [
+              { normalizedPaymentStatus: { in: ['NOT_PAID', 'PARTIALLY_PAID'] } },
+              { paymentStatus: { contains: 'Not', mode: 'insensitive' } },
+              { paymentStatus: { contains: 'Unpaid', mode: 'insensitive' } },
+            ],
+          },
         ],
       };
 
@@ -99,53 +114,53 @@ export class DashboardController {
         // Gate Entry Scans
         entryEventId
           ? prisma.attendance.count({
-              where: {
-                eventId: entryEventId,
-                candidate: baseCandidateWhere,
-              },
-            })
+            where: {
+              eventId: entryEventId,
+              candidate: baseCandidateWhere,
+            },
+          })
           : 0,
         entryEventId
           ? prisma.attendance.count({
-              where: {
-                eventId: entryEventId,
-                candidate: paidCondition,
-              },
-            })
+            where: {
+              eventId: entryEventId,
+              candidate: paidCondition,
+            },
+          })
           : 0,
         entryEventId
           ? prisma.attendance.count({
-              where: {
-                eventId: entryEventId,
-                candidate: unpaidCondition,
-              },
-            })
+            where: {
+              eventId: entryEventId,
+              candidate: unpaidCondition,
+            },
+          })
           : 0,
 
         // Kit Allocation Scans
         kitEventId
           ? prisma.attendance.count({
-              where: {
-                eventId: kitEventId,
-                candidate: baseCandidateWhere,
-              },
-            })
+            where: {
+              eventId: kitEventId,
+              candidate: baseCandidateWhere,
+            },
+          })
           : 0,
         kitEventId
           ? prisma.attendance.count({
-              where: {
-                eventId: kitEventId,
-                candidate: paidCondition,
-              },
-            })
+            where: {
+              eventId: kitEventId,
+              candidate: paidCondition,
+            },
+          })
           : 0,
         kitEventId
           ? prisma.attendance.count({
-              where: {
-                eventId: kitEventId,
-                candidate: unpaidCondition,
-              },
-            })
+            where: {
+              eventId: kitEventId,
+              candidate: unpaidCondition,
+            },
+          })
           : 0,
 
         prisma.candidate.groupBy({
