@@ -35,34 +35,19 @@ export class DashboardController {
 
       const baseCandidateWhere = collegeConditions.length > 0 ? { AND: collegeConditions } : {};
 
+      // Strictly PAID candidates (normalized)
       const paidCondition = {
         AND: [
           ...collegeConditions,
-          {
-            OR: [
-              { normalizedPaymentStatus: 'PAID' },
-              { paymentStatus: { contains: 'Paid', mode: 'insensitive' } },
-            ],
-          },
-          {
-            NOT: [
-              { paymentStatus: { contains: 'Not', mode: 'insensitive' } },
-              { paymentStatus: { contains: 'Unpaid', mode: 'insensitive' } },
-            ],
-          },
+          { normalizedPaymentStatus: 'PAID' },
         ],
       };
 
+      // Strictly UNPAID / PARTIALLY PAID candidates (normalized)
       const unpaidCondition = {
         AND: [
           ...collegeConditions,
-          {
-            OR: [
-              { normalizedPaymentStatus: { in: ['NOT_PAID', 'PARTIALLY_PAID'] } },
-              { paymentStatus: { contains: 'Not', mode: 'insensitive' } },
-              { paymentStatus: { contains: 'Unpaid', mode: 'insensitive' } },
-            ],
-          },
+          { normalizedPaymentStatus: { in: ['NOT_PAID', 'PARTIALLY_PAID'] } },
         ],
       };
 
