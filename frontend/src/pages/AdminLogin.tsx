@@ -61,7 +61,7 @@ export const AdminLogin: React.FC = () => {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter Admin Username"
+              placeholder=""
               required
               className="w-full bg-slate-900 border border-slate-700 rounded-2xl py-3 px-4 text-white text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
@@ -76,7 +76,7 @@ export const AdminLogin: React.FC = () => {
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter Admin Password"
+                placeholder=""
                 required
                 className="w-full bg-slate-900 border border-slate-700 rounded-2xl py-3 px-4 pr-12 text-white text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />

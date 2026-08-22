@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { api, isNativePlatform, getApiBaseUrl } from '../services/api';
+import { api } from '../services/api';
 import {
   GraduationCap,
   ShieldCheck,
@@ -12,14 +12,10 @@ import {
   KeyRound,
   Eye,
   EyeOff,
-  Server,
-  Wifi,
 } from '../components/Icons';
-import { ServerConfigModal } from '../components/ServerConfigModal';
 
 export const LoginPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'STUDENT' | 'ADMIN'>('STUDENT');
-  const [isServerModalOpen, setIsServerModalOpen] = useState<boolean>(false);
 
   // Student State
   const [studentId, setStudentId] = useState<string>('');
@@ -53,7 +49,7 @@ export const LoginPage: React.FC = () => {
       loginStudent(res);
       navigate('/pass');
     } catch (err: any) {
-      setStudentError(err.message || 'Authentication failed. Please check your credentials or server connection.');
+      setStudentError(err.message || 'Authentication failed. Please check your credentials.');
     } finally {
       setStudentLoading(false);
     }
@@ -69,27 +65,11 @@ export const LoginPage: React.FC = () => {
       loginAdmin(res.token, res.user);
       navigate('/dashboard');
     } catch (err: any) {
-      setAdminError(err.message || 'Invalid administrator credentials or cannot reach server.');
+      setAdminError(err.message || 'Invalid administrator credentials.');
     } finally {
       setAdminLoading(false);
     }
   };
-
-  const isNetworkError = (msg: string | null) => {
-    if (!msg) return false;
-    const lower = msg.toLowerCase();
-    return (
-      lower.includes('cannot reach') ||
-      lower.includes('cannot connect') ||
-      lower.includes('failed to fetch') ||
-      lower.includes('network') ||
-      lower.includes('server url') ||
-      lower.includes('connection')
-    );
-  };
-
-  const isMobile = isNativePlatform();
-  const activeBaseUrl = getApiBaseUrl();
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex flex-col lg:flex-row relative bg-slate-950 text-slate-100 overflow-x-hidden">
@@ -109,25 +89,16 @@ export const LoginPage: React.FC = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-slate-950/75 via-slate-900/60 to-slate-950" />
         <div className="absolute inset-0 bg-gradient-to-tr from-emerald-950/60 via-transparent to-slate-950/80" />
 
-        {/* Top bar on mobile with Server status button */}
+        {/* Top badge on mobile */}
         <div className="relative z-10 flex items-center justify-between">
-          <span className="px-2.5 py-1 rounded-full bg-slate-900/80 border border-emerald-500/30 text-emerald-300 text-[11px] font-semibold flex items-center gap-1.5 backdrop-blur-md">
+          <span className="px-3 py-1 rounded-full bg-slate-900/80 border border-emerald-500/30 text-emerald-300 text-[11px] font-semibold flex items-center gap-1.5 backdrop-blur-md">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             Graduation Day 2026
           </span>
-
-          <button
-            type="button"
-            onClick={() => setIsServerModalOpen(true)}
-            className="px-2.5 py-1 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white text-xs font-medium flex items-center gap-1.5 backdrop-blur-md shadow-lg transition-all cursor-pointer"
-          >
-            <Wifi className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Server IP</span>
-          </button>
         </div>
 
         {/* Hero Branding Content */}
-        <div className="relative z-10 text-center space-y-1.5 my-auto pb-4">
+        <div className="relative z-10 text-center space-y-1.5 my-auto pb-3">
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight drop-shadow-md">
             MVSR Engineering College
           </h1>
@@ -181,20 +152,11 @@ export const LoginPage: React.FC = () => {
           }}
         />
 
-        <div className="relative z-10 p-8 xl:p-12 flex justify-between items-center">
-          <span className="px-3.5 py-1.5 rounded-full bg-slate-900/80 border border-emerald-500/30 text-emerald-300 text-xs font-semibold backdrop-blur-md flex items-center gap-2">
+        <div className="relative z-10 p-8 xl:p-12">
+          <span className="px-3.5 py-1.5 rounded-full bg-slate-900/80 border border-emerald-500/30 text-emerald-300 text-xs font-semibold backdrop-blur-md inline-flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             MVSR Engineering College · Graduation Day 2026
           </span>
-
-          <button
-            type="button"
-            onClick={() => setIsServerModalOpen(true)}
-            className="px-3 py-1.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white text-xs font-medium flex items-center gap-2 backdrop-blur-md shadow-lg transition-all cursor-pointer"
-          >
-            <Server className="w-4 h-4 text-emerald-400" />
-            <span>Server: {activeBaseUrl.replace('/api', '')}</span>
-          </button>
         </div>
 
         {/* Center branding */}
@@ -337,27 +299,14 @@ export const LoginPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Error Alert with Server Configuration button if connection fails */}
+                  {/* Error Alert */}
                   {studentError && (
-                    <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/25 text-rose-300 text-xs font-medium space-y-2 animate-in fade-in duration-200">
-                      <div className="flex items-start gap-2.5">
-                        <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                        <div>
-                          <p className="font-bold text-rose-200 text-sm mb-0.5">Authentication Failed</p>
-                          <p className="leading-relaxed">{studentError}</p>
-                        </div>
+                    <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/25 text-rose-300 text-xs font-medium animate-in fade-in duration-200">
+                      <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-bold text-rose-200 text-sm mb-0.5">Authentication Failed</p>
+                        <p className="leading-relaxed">{studentError}</p>
                       </div>
-
-                      {isNetworkError(studentError) && (
-                        <button
-                          type="button"
-                          onClick={() => setIsServerModalOpen(true)}
-                          className="w-full py-2 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl text-emerald-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                          <Server className="w-3.5 h-3.5" />
-                          <span>Configure Host Server IP (e.g. 10.213.207.38)</span>
-                        </button>
-                      )}
                     </div>
                   )}
 
@@ -401,7 +350,7 @@ export const LoginPage: React.FC = () => {
                         type="text"
                         value={adminUsername}
                         onChange={(e) => setAdminUsername(e.target.value)}
-                        placeholder="admin@graduation.edu"
+                        placeholder=""
                         required
                         className="w-full bg-slate-800/90 border border-slate-700 rounded-2xl py-3 pl-10 pr-4 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/50 transition-all"
                       />
@@ -420,7 +369,7 @@ export const LoginPage: React.FC = () => {
                         type={showAdminPassword ? 'text' : 'password'}
                         value={adminPassword}
                         onChange={(e) => setAdminPassword(e.target.value)}
-                        placeholder="admin@2026"
+                        placeholder=""
                         required
                         className="w-full bg-slate-800/90 border border-slate-700 rounded-2xl py-3 pl-10 pr-11 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500/50 transition-all"
                       />
@@ -434,27 +383,14 @@ export const LoginPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Error */}
+                  {/* Error Alert */}
                   {adminError && (
-                    <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/25 text-rose-300 text-xs font-medium space-y-2 animate-in fade-in duration-200">
-                      <div className="flex items-start gap-2.5">
-                        <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                        <div>
-                          <p className="font-bold text-rose-200 text-sm mb-0.5">Login Failed</p>
-                          <p className="leading-relaxed">{adminError}</p>
-                        </div>
+                    <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/25 text-rose-300 text-xs font-medium animate-in fade-in duration-200">
+                      <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-bold text-rose-200 text-sm mb-0.5">Login Failed</p>
+                        <p className="leading-relaxed">{adminError}</p>
                       </div>
-
-                      {isNetworkError(adminError) && (
-                        <button
-                          type="button"
-                          onClick={() => setIsServerModalOpen(true)}
-                          className="w-full py-2 px-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl text-emerald-300 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                          <Server className="w-3.5 h-3.5" />
-                          <span>Configure Host Server IP</span>
-                        </button>
-                      )}
                     </div>
                   )}
 
@@ -479,27 +415,8 @@ export const LoginPage: React.FC = () => {
 
             </div>
           </div>
-
-          {/* Quick Server connection footer button on mobile */}
-          <div className="mt-4 text-center">
-            <button
-              type="button"
-              onClick={() => setIsServerModalOpen(true)}
-              className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-emerald-300 transition-colors py-1 px-3 rounded-xl bg-slate-900/60 border border-slate-800/80 cursor-pointer"
-            >
-              <Server className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Server Connection: <span className="font-mono text-slate-300">{activeBaseUrl.replace('/api', '')}</span></span>
-            </button>
-          </div>
         </div>
       </div>
-
-      {/* Server Config Modal */}
-      <ServerConfigModal
-        isOpen={isServerModalOpen}
-        onClose={() => setIsServerModalOpen(false)}
-      />
     </div>
   );
 };
-

@@ -16,23 +16,13 @@ export function isNativePlatform(): boolean {
 }
 
 export function getApiBaseUrl(): string {
-  const customUrl = localStorage.getItem('qr_server_url');
-  if (customUrl && customUrl.trim()) {
-    const trimmed = customUrl.trim().replace(/\/+$/, '');
-    return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
-  }
-
   const env = (import.meta as any).env;
   if (env && env.VITE_API_URL) {
     const envUrl = (env.VITE_API_URL as string).trim().replace(/\/+$/, '');
     return envUrl.endsWith('/api') ? envUrl : `${envUrl}/api`;
   }
 
-  if (isNativePlatform()) {
-    return 'https://graduation-day-backend-yy69.onrender.com/api';
-  }
-
-  return '/api';
+  return 'https://graduation-day-backend-yy69.onrender.com/api';
 }
 
 function getAuthHeader(): Record<string, string> {
@@ -44,18 +34,8 @@ async function safeFetch(url: string, options?: RequestInit): Promise<Response> 
   try {
     return await fetch(url, options);
   } catch (err: any) {
-    const activeBase = getApiBaseUrl();
-    const isLocal = activeBase.startsWith('/') || activeBase.includes('localhost') || activeBase.includes('127.0.0.1');
-    const isMobile = isNativePlatform();
-    
-    if (isMobile && isLocal && !localStorage.getItem('qr_server_url')) {
-      throw new Error(
-        `Cannot reach backend server. Please tap the Server button to enter your host PC's Wi-Fi IP (e.g. http://10.213.207.38:5000).`
-      );
-    }
-    
     throw new Error(
-      `Cannot connect to backend server at ${activeBase}. Please check that your phone is connected to the same Wi-Fi network and backend is running.`
+      'Unable to connect to the graduation portal service. Please check your internet connection and try again.'
     );
   }
 }
@@ -86,16 +66,9 @@ async function handleResponse(res: Response, fallbackErrorMessage: string) {
     return data;
   }
 
-  // Handle Non-JSON (e.g., HTML from frontend or proxy)
-  if (text.includes('<!DOCTYPE html>') || text.includes('<html') || text.includes('<head>')) {
-    throw new Error(
-      `Connected to web page instead of API server. Please check your Server URL in settings and ensure it points to the backend (port 5000, e.g. http://192.168.1.19:5000).`
-    );
-  }
-
   if (!res.ok) {
     throw new Error(
-      `Server returned ${res.status}: ${text.slice(0, 120).trim() || res.statusText || fallbackErrorMessage}`
+      `Request failed (${res.status}): ${text.slice(0, 120).trim() || res.statusText || fallbackErrorMessage}`
     );
   }
 
@@ -104,85 +77,6 @@ async function handleResponse(res: Response, fallbackErrorMessage: string) {
 
 export const api = {
   isNative: isNativePlatform,
-
-  isCustomServerSet: (): boolean => {
-    return Boolean(localStorage.getItem('qr_server_url'));
-  },
-
-  getServerUrl: (): string => {
-    const env = (import.meta as any).env;
-    return localStorage.getItem('qr_server_url') || (env?.VITE_API_URL as string) || '';
-  },
-
-  getRecommendedPresets: (): Array<{ label: string; url: string; desc: string }> => {
-    return [
-      {
-        label: 'Render Cloud Backend (Production)',
-        url: 'https://graduation-day-backend-yy69.onrender.com',
-        desc: 'Official cloud server accessible everywhere over the internet',
-      },
-      {
-        label: 'Current Wi-Fi Host IP',
-        url: 'http://10.213.207.38:5000',
-        desc: 'For local testing on same Wi-Fi as host computer',
-      },
-      {
-        label: 'Alternate Local Wi-Fi',
-        url: 'http://192.168.1.19:5000',
-        desc: 'Alternate Wi-Fi network host address',
-      },
-      {
-        label: 'Localhost (Dev PC Browser)',
-        url: 'http://localhost:5000',
-        desc: 'For local browser development on this computer',
-      },
-    ];
-  },
-
-  setServerUrl: (url: string) => {
-    if (!url || !url.trim()) {
-      localStorage.removeItem('qr_server_url');
-    } else {
-      localStorage.setItem('qr_server_url', url.trim().replace(/\/+$/, ''));
-    }
-  },
-
-  testConnection: async (testUrl?: string): Promise<{ ok: boolean; status?: string; message?: string }> => {
-    let baseUrl: string;
-    if (testUrl && testUrl.trim()) {
-      const trimmed = testUrl.trim().replace(/\/+$/, '');
-      baseUrl = trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
-    } else {
-      baseUrl = getApiBaseUrl();
-    }
-
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000);
-      
-      // Try /health then /api/health
-      let res: Response | null = null;
-      try {
-        res = await fetch(`${baseUrl}/health`, { signal: controller.signal });
-      } catch {
-        // Fallback without /api if base ended in /api or vice versa
-        const altUrl = baseUrl.endsWith('/api') ? baseUrl.replace(/\/api$/, '/health') : `${baseUrl}/api/health`;
-        res = await fetch(altUrl, { signal: controller.signal });
-      }
-      
-      clearTimeout(timeoutId);
-      if (res && res.ok) {
-        const data = await res.json();
-        return { ok: true, status: data.status || 'OK', message: 'Connected to server successfully!' };
-      }
-      return { ok: false, message: `Server responded with status ${res?.status || 'ERROR'}` };
-    } catch (err: any) {
-      if (err.name === 'AbortError') {
-        return { ok: false, message: 'Connection timed out (6s). Check IP, port & Wi-Fi.' };
-      }
-      return { ok: false, message: err.message || 'Cannot reach server. Ensure backend is running.' };
-    }
-  },
 
   // Auth
   login: async (username: string, password: string) => {
@@ -194,11 +88,11 @@ export const api = {
     return handleResponse(res, 'Login failed. Please check credentials.');
   },
 
-  studentLogin: async (studentId: string, password: string) => {
+  studentLogin: async (studentId: string, password?: string) => {
     const res = await safeFetch(`${getApiBaseUrl()}/candidate/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ studentId, password }),
+      body: JSON.stringify({ studentId, password: password || studentId }),
     });
     return handleResponse(res, 'Student login failed.');
   },
@@ -216,7 +110,7 @@ export const api = {
     const contentType = res.headers.get('content-type') || '';
     if (contentType.includes('application/json')) {
       const data = await res.json();
-      if (res.status === 403) return data; // Not eligible structure
+      if (res.status === 403) return data;
       if (!res.ok) throw new Error(data.message || data.error || 'Verification failed');
       return data;
     }

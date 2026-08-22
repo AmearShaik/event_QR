@@ -124,67 +124,32 @@ export const QRCard: React.FC<QRCardProps> = ({ candidate, event, token }) => {
       ctx.fillText('Present this pass at the gate scanner for entrance verification.', 300, 685);
 
       const dataUrl = canvas.toDataURL('image/png', 1.0);
+      const fileName = `Graduation-Pass-${candidate.studentId}.png`;
 
-      if (api.isNative()) {
-        const { Filesystem, Directory } = await import('@capacitor/filesystem');
-        const { Media } = await import('@capacitor-community/media');
-        
-        const fileName = `Graduation-Pass-${candidate.studentId}.png`;
-        let uri = '';
-        try {
-          const result = await Filesystem.writeFile({
-            path: fileName,
-            data: dataUrl.split(',')[1],
-            directory: Directory.Cache
-          });
-          uri = result.uri;
-        } catch (fsErr: any) {
-          showToast('Filesystem error: ' + fsErr.message);
-          return;
-        }
-        
-        try {
-          // Android requires an album identifier.
-          let albumIdentifier;
-          try {
-            const { albums } = await Media.getAlbums();
-            let album = albums.find(a => a.name === 'Pictures' || a.name === 'Downloads');
-            if (!album) {
-              await Media.createAlbum({ name: 'Pictures' }).catch(() => {});
-              const { albums: newAlbums } = await Media.getAlbums();
-              album = newAlbums.find(a => a.name === 'Pictures');
-            }
-            if (album) {
-              albumIdentifier = album.identifier;
-            } else if (albums.length > 0) {
-              albumIdentifier = albums[0].identifier;
-            }
-          } catch (e) {
-            console.warn("Failed to get/create album", e);
-          }
-
-          await Media.savePhoto({
-            path: uri,
-            ...(albumIdentifier ? { albumIdentifier } : {})
-          });
-          showToast('QR Pass saved to gallery!');
-        } catch (mediaErr: any) {
-          console.log('Media save failed', mediaErr);
-          showToast('Failed to save to gallery: ' + mediaErr.message);
-        }
-      } else {
-        // Fallback for web
-        const link = document.createElement('a');
-        link.download = `Graduation-Pass-${candidate.studentId}.png`;
-        link.href = dataUrl;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        showToast('QR Pass downloaded successfully!');
+      // Convert dataUrl to Blob
+      const byteString = atob(dataUrl.split(',')[1]);
+      const mimeString = dataUrl.split(',')[0].split(':')[1].split(';')[0];
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
       }
+      const blob = new Blob([ab], { type: mimeString });
+      const blobUrl = URL.createObjectURL(blob);
+
+      // Trigger direct download
+      const link = document.createElement('a');
+      link.download = fileName;
+      link.href = blobUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+
+      showToast('QR Pass downloaded to your device!');
     } catch (err) {
       console.error('PNG export error', err);
-      showToast('Error saving QR Pass.');
+      showToast('Error saving QR Pass. Please take a screenshot.');
     }
   };
 
