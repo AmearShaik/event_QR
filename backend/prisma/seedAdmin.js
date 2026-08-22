@@ -17,7 +17,7 @@ function hashPassword(password) {
 
 async function main() {
   const username = process.env.DEFAULT_ADMIN_USERNAME || 'admin@graduation.edu';
-  const password = process.env.DEFAULT_ADMIN_PASSWORD || 'Admin@2026Password!';
+  const password = process.env.DEFAULT_ADMIN_PASSWORD || 'admin@2026';
   const name = process.env.DEFAULT_ADMIN_NAME || 'Graduation Admin';
 
   const passwordHash = hashPassword(password);

@@ -18,6 +18,6 @@ services:
       - key: DEFAULT_ADMIN_USERNAME
         value: admin@graduation.edu
       - key: DEFAULT_ADMIN_PASSWORD
-        value: Admin@2026Password!
+        value: admin@2026
       - key: DEFAULT_ADMIN_NAME
         value: Graduation Admin
