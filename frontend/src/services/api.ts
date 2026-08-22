@@ -165,12 +165,12 @@ export const api = {
     return data.logs || [];
   },
 
-  // Gate Scanner
-  scanToken: async (qrToken: string, eventId?: string): Promise<ScanResponse> => {
+  // Gate Scanner & Kit Allocation
+  scanToken: async (qrToken: string, scanMode?: string): Promise<ScanResponse> => {
     const res = await safeFetch(`${getApiBaseUrl()}/attendance/scan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-      body: JSON.stringify({ qrToken, eventId }),
+      body: JSON.stringify({ qrToken, scanMode }),
     });
     const contentType = res.headers.get('content-type') || '';
     if (contentType.includes('application/json')) {

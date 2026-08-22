@@ -227,21 +227,23 @@ export const QRScanner: React.FC<QRScannerProps> = ({
           <div className="absolute inset-0 z-30 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-200">
             {scanResult.status === 'SUCCESS' && (
               <div className="w-full h-full bg-emerald-950/95 border-4 border-emerald-500 rounded-2xl p-6 flex flex-col items-center justify-center shadow-2xl">
-                <CheckCircle2 className="w-20 h-20 text-emerald-400 mb-2 animate-bounce" />
+                <CheckCircle2 className="w-16 h-16 text-emerald-400 mb-2 animate-bounce" />
                 <span className="text-xs font-extrabold uppercase tracking-widest text-emerald-400 mb-1">
-                  ✓ ENTRY ALLOWED
+                  {scanResult.event?.toLowerCase().includes('kit') || scanResult.message?.toLowerCase().includes('kit')
+                    ? '🎓 KIT ALLOCATION APPROVED'
+                    : '✓ GATE ENTRY ALLOWED'}
                 </span>
-                <h2 className="text-2xl font-black text-white mb-2">
+                <h2 className="text-2xl font-black text-white mb-1">
                   {scanResult.candidate?.name}
                 </h2>
-                <div className="bg-emerald-900/60 rounded-xl px-4 py-2 border border-emerald-500/40 mb-4 text-xs font-mono text-emerald-200">
-                  ID: {scanResult.candidate?.studentId} | {scanResult.candidate?.program}
+                <div className="bg-emerald-900/60 rounded-xl px-4 py-1.5 border border-emerald-500/40 mb-3 text-xs font-mono text-emerald-200">
+                  ID: {scanResult.candidate?.studentId} {scanResult.candidate?.program ? `| ${scanResult.candidate.program}` : ''}
                 </div>
-                <p className="text-xs font-semibold text-emerald-300">
+                <p className="text-xs font-semibold text-emerald-300 max-w-sm">
                   {scanResult.message}
                 </p>
                 {autoResetTimer !== null && (
-                  <span className="text-[11px] text-emerald-400/70 font-mono mt-4 flex items-center gap-1">
+                  <span className="text-[11px] text-emerald-400/70 font-mono mt-3 flex items-center gap-1">
                     <RefreshCw className="w-3 h-3 animate-spin" /> Resetting scanner in {autoResetTimer}s...
                   </span>
                 )}
@@ -250,21 +252,23 @@ export const QRScanner: React.FC<QRScannerProps> = ({
 
             {scanResult.status === 'DUPLICATE' && (
               <div className="w-full h-full bg-amber-950/95 border-4 border-amber-500 rounded-2xl p-6 flex flex-col items-center justify-center shadow-2xl">
-                <AlertTriangle className="w-20 h-20 text-amber-400 mb-2 animate-pulse" />
+                <AlertTriangle className="w-16 h-16 text-amber-400 mb-2 animate-pulse" />
                 <span className="text-xs font-extrabold uppercase tracking-widest text-amber-400 mb-1">
-                  ⚠ ALREADY ATTENDED
+                  {scanResult.event?.toLowerCase().includes('kit') || scanResult.message?.toLowerCase().includes('kit')
+                    ? '⚠ KIT ALREADY CLAIMED'
+                    : '⚠ ALREADY SCANNED'}
                 </span>
-                <h2 className="text-2xl font-black text-white mb-2">
+                <h2 className="text-2xl font-black text-white mb-1">
                   {scanResult.candidate?.name || 'Candidate'}
                 </h2>
-                <div className="bg-amber-900/60 rounded-xl px-4 py-2 border border-amber-500/40 mb-4 text-xs font-mono text-amber-200">
+                <div className="bg-amber-900/60 rounded-xl px-4 py-1.5 border border-amber-500/40 mb-3 text-xs font-mono text-amber-200">
                   ID: {scanResult.candidate?.studentId}
                 </div>
-                <p className="text-xs font-semibold text-amber-200">
+                <p className="text-xs font-semibold text-amber-200 max-w-sm">
                   {scanResult.message}
                 </p>
                 {autoResetTimer !== null && (
-                  <span className="text-[11px] text-amber-400/70 font-mono mt-4 flex items-center gap-1">
+                  <span className="text-[11px] text-amber-400/70 font-mono mt-3 flex items-center gap-1">
                     <RefreshCw className="w-3 h-3 animate-spin" /> Resetting scanner in {autoResetTimer}s...
                   </span>
                 )}
@@ -273,21 +277,21 @@ export const QRScanner: React.FC<QRScannerProps> = ({
 
             {scanResult.status === 'NOT_ELIGIBLE' && (
               <div className="w-full h-full bg-rose-950/95 border-4 border-rose-500 rounded-2xl p-6 flex flex-col items-center justify-center shadow-2xl">
-                <XCircle className="w-20 h-20 text-rose-500 mb-2" />
+                <XCircle className="w-16 h-16 text-rose-500 mb-2" />
                 <span className="text-xs font-extrabold uppercase tracking-widest text-rose-400 mb-1">
-                  ✕ ENTRY NOT ALLOWED
+                  ✕ KIT ALLOCATION DENIED
                 </span>
-                <h2 className="text-2xl font-black text-white mb-2">
+                <h2 className="text-2xl font-black text-white mb-1">
                   {scanResult.candidate?.name || 'Candidate'}
                 </h2>
-                <p className="text-sm font-bold text-rose-300 mb-3">
+                <div className="bg-rose-900/60 rounded-xl px-4 py-1.5 border border-rose-500/40 mb-3 text-xs font-mono text-rose-200">
+                  ID: {scanResult.candidate?.studentId}
+                </div>
+                <p className="text-xs font-bold text-rose-300 max-w-sm">
                   {scanResult.message}
                 </p>
-                <div className="bg-rose-900/60 rounded-xl px-4 py-2 border border-rose-500/40 text-xs font-medium text-rose-200">
-                  Payment Status: {scanResult.reason === 'PARTIALLY_PAID' ? 'Partially Paid' : 'Not Paid'}
-                </div>
                 {autoResetTimer !== null && (
-                  <span className="text-[11px] text-rose-400/70 font-mono mt-4 flex items-center gap-1">
+                  <span className="text-[11px] text-rose-400/70 font-mono mt-3 flex items-center gap-1">
                     <RefreshCw className="w-3 h-3 animate-spin" /> Resetting scanner in {autoResetTimer}s...
                   </span>
                 )}
@@ -299,15 +303,15 @@ export const QRScanner: React.FC<QRScannerProps> = ({
               scanResult.status === 'QR_DISABLED' ||
               scanResult.status === 'WRONG_EVENT') && (
               <div className="w-full h-full bg-slate-950/95 border-4 border-rose-600 rounded-2xl p-6 flex flex-col items-center justify-center shadow-2xl">
-                <XCircle className="w-20 h-20 text-rose-500 mb-2" />
+                <XCircle className="w-16 h-16 text-rose-500 mb-2" />
                 <span className="text-xs font-extrabold uppercase tracking-widest text-rose-400 mb-1">
                   ✕ {scanResult.status.replace(/_/g, ' ')}
                 </span>
-                <h3 className="text-xl font-bold text-white mb-2">
+                <h3 className="text-lg font-bold text-white mb-2 max-w-sm">
                   {scanResult.message}
                 </h3>
                 {autoResetTimer !== null && (
-                  <span className="text-[11px] text-slate-400 font-mono mt-4 flex items-center gap-1">
+                  <span className="text-[11px] text-slate-400 font-mono mt-3 flex items-center gap-1">
                     <RefreshCw className="w-3 h-3 animate-spin" /> Resetting scanner in {autoResetTimer}s...
                   </span>
                 )}

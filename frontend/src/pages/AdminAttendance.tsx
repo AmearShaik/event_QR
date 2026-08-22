@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
-import { ClipboardList, Download, RefreshCw, ChevronLeft, ChevronRight, UserCheck } from '../components/Icons';
+import { ClipboardList, Download, RefreshCw, ChevronLeft, ChevronRight, UserCheck, GraduationCap, LogIn } from '../components/Icons';
 
 export const AdminAttendance: React.FC = () => {
   const [records, setRecords] = useState<any[]>([]);
@@ -8,14 +8,24 @@ export const AdminAttendance: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState<number>(1);
   const [pagination, setPagination] = useState<{ total: number; totalPages: number }>({ total: 0, totalPages: 1 });
+  const [filterMode, setFilterMode] = useState<string>('all'); // 'all', 'entry', 'kit'
 
   const fetchAttendance = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.getAttendanceLogs({ page: page.toString(), limit: '30' });
-      setRecords(res.records);
-      setPagination(res.pagination);
+      const params: Record<string, string> = {
+        page: page.toString(),
+        limit: '30',
+      };
+      if (filterMode === 'entry') {
+        params.search = 'entry';
+      } else if (filterMode === 'kit') {
+        params.search = 'kit';
+      }
+      const res = await api.getAttendanceLogs(params);
+      setRecords(res.records || []);
+      setPagination(res.pagination || { total: 0, totalPages: 1 });
     } catch (err: any) {
       setError(err.message || 'Failed to load attendance logs.');
     } finally {
@@ -25,7 +35,7 @@ export const AdminAttendance: React.FC = () => {
 
   useEffect(() => {
     fetchAttendance();
-  }, [page]);
+  }, [page, filterMode]);
 
   const handleExportCSV = async () => {
     try {
@@ -41,16 +51,21 @@ export const AdminAttendance: React.FC = () => {
     }
   };
 
+  const isKitRecord = (r: any) => {
+    const eventName = (r.eventName || r.event?.name || '').toLowerCase();
+    return eventName.includes('kit');
+  };
+
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-5">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
             <ClipboardList className="w-8 h-8 text-emerald-400" />
-            Entrance Attendance Audit Log
+            Attendance & Kit Allocation Log
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Real-time audit log of candidate entrance check-ins verified at gate scanners.
+            Real-time audit log of Gate Entry check-ins and Graduation Kit distribution.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -71,11 +86,47 @@ export const AdminAttendance: React.FC = () => {
         </div>
       </div>
 
+      {/* Filter Tabs */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => { setFilterMode('all'); setPage(1); }}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            filterMode === 'all'
+              ? 'bg-slate-700 text-white border border-slate-600'
+              : 'bg-slate-900/60 text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          All Checkpoints ({pagination.total})
+        </button>
+        <button
+          onClick={() => { setFilterMode('entry'); setPage(1); }}
+          className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+            filterMode === 'entry'
+              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+              : 'bg-slate-900/60 text-slate-400 hover:text-emerald-300'
+          }`}
+        >
+          <LogIn className="w-3.5 h-3.5" />
+          Gate Entries
+        </button>
+        <button
+          onClick={() => { setFilterMode('kit'); setPage(1); }}
+          className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+            filterMode === 'kit'
+              ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+              : 'bg-slate-900/60 text-slate-400 hover:text-amber-300'
+          }`}
+        >
+          <GraduationCap className="w-3.5 h-3.5" />
+          Kit Allocations
+        </button>
+      </div>
+
       <div className="bg-slate-800/80 backdrop-blur-xl border border-slate-700/80 rounded-3xl overflow-hidden shadow-xl">
         {loading ? (
           <div className="p-12 text-center text-slate-400 text-xs flex items-center justify-center gap-2">
             <RefreshCw className="w-5 h-5 animate-spin text-emerald-400" />
-            Loading entrance attendance audit logs...
+            Loading attendance records...
           </div>
         ) : error ? (
           <div className="p-6 text-center text-rose-400 text-xs">{error}</div>
@@ -88,8 +139,8 @@ export const AdminAttendance: React.FC = () => {
                   <th className="py-3.5 px-4">Student ID</th>
                   <th className="py-3.5 px-4">Candidate Name</th>
                   <th className="py-3.5 px-4">Program</th>
-                  <th className="py-3.5 px-4">Event</th>
-                  <th className="py-3.5 px-4">Scanned By</th>
+                  <th className="py-3.5 px-4">Fee Status</th>
+                  <th className="py-3.5 px-4">Checkpoint / Event</th>
                   <th className="py-3.5 px-4">Verification Status</th>
                 </tr>
               </thead>
@@ -97,33 +148,68 @@ export const AdminAttendance: React.FC = () => {
                 {records.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="py-12 text-center text-slate-500">
-                      No entrance attendance records logged yet. Begin scanning candidate QR passes at gate scanners.
+                      No scan records logged for this filter. Start scanning QR passes at checkpoints.
                     </td>
                   </tr>
                 ) : (
-                  records.map((r) => (
-                    <tr key={r.id} className="hover:bg-slate-700/40 transition-colors">
-                      <td className="py-3.5 px-4 font-mono text-slate-400">
-                        {new Date(r.scannedAt).toLocaleString()}
-                      </td>
-                      <td className="py-3.5 px-4 font-mono font-bold text-white">
-                        {r.candidate?.studentId}
-                      </td>
-                      <td className="py-3.5 px-4 font-semibold text-emerald-300">
-                        {r.candidate?.name}
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-400">{r.candidate?.program}</td>
-                      <td className="py-3.5 px-4 text-slate-300 font-medium">{r.event?.name}</td>
-                      <td className="py-3.5 px-4 text-slate-400">
-                        {r.scannedBy ? r.scannedBy.name : 'System Gateway'}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span className="inline-flex items-center gap-1 text-emerald-400 font-bold text-[11px] bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-                          <UserCheck className="w-3.5 h-3.5" /> ENTRY VERIFIED
-                        </span>
-                      </td>
-                    </tr>
-                  ))
+                  records.map((r) => {
+                    const isKit = isKitRecord(r);
+                    const timestamp = r.entryTime || r.scannedAt || r.createdAt;
+                    const studentId = r.studentId || r.candidate?.studentId;
+                    const candidateName = r.candidateName || r.candidate?.name;
+                    const program = r.program || r.candidate?.program;
+                    const feeStatus = r.paymentStatus || r.candidate?.paymentStatus || 'Unknown';
+                    const eventName = r.eventName || r.event?.name || 'Gate Entry';
+
+                    return (
+                      <tr key={r.id} className="hover:bg-slate-700/40 transition-colors">
+                        <td className="py-3.5 px-4 font-mono text-slate-400">
+                          {timestamp ? new Date(timestamp).toLocaleString() : 'N/A'}
+                        </td>
+                        <td className="py-3.5 px-4 font-mono font-bold text-white">
+                          {studentId}
+                        </td>
+                        <td className="py-3.5 px-4 font-semibold text-slate-100">
+                          {candidateName}
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-400">{program}</td>
+                        <td className="py-3.5 px-4">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              feeStatus.toLowerCase().includes('paid') && !feeStatus.toLowerCase().includes('unpaid')
+                                ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30'
+                                : 'bg-rose-500/10 text-rose-300 border border-rose-500/30'
+                            }`}
+                          >
+                            {feeStatus}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold ${
+                              isKit
+                                ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30'
+                                : 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30'
+                            }`}
+                          >
+                            {isKit ? <GraduationCap className="w-3.5 h-3.5" /> : <LogIn className="w-3.5 h-3.5" />}
+                            {eventName}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span
+                            className={`inline-flex items-center gap-1 font-bold text-[11px] px-2.5 py-0.5 rounded-full border ${
+                              isKit
+                                ? 'text-amber-300 bg-amber-500/10 border-amber-500/20'
+                                : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                            }`}
+                          >
+                            <UserCheck className="w-3.5 h-3.5" /> {isKit ? 'KIT ALLOCATED' : 'ENTRY VERIFIED'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -132,7 +218,7 @@ export const AdminAttendance: React.FC = () => {
 
         <div className="bg-slate-900/60 border-t border-slate-700 px-6 py-4 flex items-center justify-between">
           <span className="text-xs text-slate-400">
-            Total Attendance Records: <strong className="text-white">{pagination.total}</strong> | Page {page} of {pagination.totalPages}
+            Total Records: <strong className="text-white">{pagination.total}</strong> | Page {page} of {pagination.totalPages}
           </span>
           <div className="flex items-center gap-2">
             <button
