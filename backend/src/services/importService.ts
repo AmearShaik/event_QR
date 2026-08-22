@@ -18,29 +18,111 @@ export class ImportService {
    * Reads raw buffer (CSV or XLSX) and extracts standardized rows.
    */
   static parseFileBuffer(buffer: Buffer, originalFilename: string): ParsedRowData[] {
-    const isCsv = originalFilename.endsWith('.csv');
+    const isCsv = originalFilename.toLowerCase().endsWith('.csv');
     const rows: ParsedRowData[] = [];
 
     if (isCsv) {
       const csvString = buffer.toString('utf-8');
-      const records = parseCsv(csvString, {
-        columns: true,
-        skip_empty_lines: true,
-        trim: true,
-      });
+      try {
+        const records = parseCsv(csvString, {
+          columns: true,
+          skip_empty_lines: true,
+          trim: true,
+          relax_column_count: true,
+        });
 
-      for (const rec of records) {
-        rows.push(this.extractRowData(rec));
+        for (const rec of records) {
+          const row = this.extractRowData(rec);
+          if (row.studentId) {
+            rows.push(row);
+          }
+        }
+      } catch {
+        // Fallback for CSVs with title rows before header
+        const lines = csvString.split(/\r?\n/).filter((l) => l.trim().length > 0);
+        let headerIndex = -1;
+        let headers: string[] = [];
+
+        for (let i = 0; i < Math.min(10, lines.length); i++) {
+          const cells = lines[i].split(',').map((c) => c.trim().replace(/^["']|["']$/g, ''));
+          const cleanCells = cells.map((c) => c.toLowerCase().replace(/[^a-z0-9]/g, ''));
+          const hasId = cleanCells.some((c) => ['rollno', 'roll', 'studentid', 'student', 'hallticket', 'sno', 'slno', 'id'].includes(c));
+          const hasName = cleanCells.some((c) => ['name', 'candidatename', 'studentname'].includes(c));
+          if (hasId && hasName) {
+            headerIndex = i;
+            headers = cells;
+            break;
+          }
+        }
+
+        if (headerIndex !== -1) {
+          for (let i = headerIndex + 1; i < lines.length; i++) {
+            const cells = lines[i].split(',').map((c) => c.trim().replace(/^["']|["']$/g, ''));
+            const rec: Record<string, any> = {};
+            headers.forEach((h, idx) => {
+              if (h) rec[h] = cells[idx] || '';
+            });
+            const row = this.extractRowData(rec);
+            if (row.studentId) rows.push(row);
+          }
+        }
       }
     } else {
       const workbook = xlsx.read(buffer, { type: 'buffer' });
-      const firstSheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[firstSheetName];
-      const jsonRows = xlsx.utils.sheet_to_json<Record<string, any>>(worksheet, { defval: '' });
+      let bestRows: ParsedRowData[] = [];
 
-      for (const rec of jsonRows) {
-        rows.push(this.extractRowData(rec));
+      for (const sheetName of workbook.SheetNames) {
+        const worksheet = workbook.Sheets[sheetName];
+        const grid = xlsx.utils.sheet_to_json<any[]>(worksheet, { header: 1, defval: '' });
+        
+        let headerRowIndex = -1;
+        let headers: string[] = [];
+
+        for (let r = 0; r < Math.min(15, grid.length); r++) {
+          const row = grid[r];
+          if (!Array.isArray(row)) continue;
+          const cleanCells = row.map((c) => String(c).toLowerCase().replace(/[^a-z0-9]/g, ''));
+          const hasId = cleanCells.some((c) => ['rollno', 'roll', 'studentid', 'student_id', 'hallticket', 'regno', 'sno', 'slno', 'id'].includes(c));
+          const hasName = cleanCells.some((c) => ['name', 'candidatename', 'studentname', 'sname'].includes(c));
+          if (hasId && hasName) {
+            headerRowIndex = r;
+            headers = row.map((h) => String(h).trim());
+            break;
+          }
+        }
+
+        if (headerRowIndex !== -1) {
+          const currentSheetRows: ParsedRowData[] = [];
+          for (let i = headerRowIndex + 1; i < grid.length; i++) {
+            const row = grid[i];
+            if (!row || !row.length) continue;
+            const rec: Record<string, any> = {};
+            headers.forEach((h, idx) => {
+              if (h) rec[h] = row[idx] !== undefined && row[idx] !== null ? String(row[idx]).trim() : '';
+            });
+            const parsed = this.extractRowData(rec);
+            if (parsed.studentId) {
+              currentSheetRows.push(parsed);
+            }
+          }
+
+          if (currentSheetRows.length > bestRows.length) {
+            bestRows = currentSheetRows;
+          }
+        }
       }
+
+      // If header scanning didn't match, fallback to default sheet_to_json
+      if (bestRows.length === 0 && workbook.SheetNames.length > 0) {
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonRows = xlsx.utils.sheet_to_json<Record<string, any>>(firstSheet, { defval: '' });
+        for (const rec of jsonRows) {
+          const parsed = this.extractRowData(rec);
+          if (parsed.studentId) bestRows.push(parsed);
+        }
+      }
+
+      rows.push(...bestRows);
     }
 
     return rows;
@@ -53,7 +135,8 @@ export class ImportService {
     const keys = Object.keys(rec);
     const findValue = (possibleHeaders: string[]): string => {
       for (const header of possibleHeaders) {
-        const key = keys.find((k) => k.toLowerCase().replace(/[^a-z0-9]/g, '') === header.toLowerCase().replace(/[^a-z0-9]/g, ''));
+        const targetClean = header.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const key = keys.find((k) => k.toLowerCase().replace(/[^a-z0-9]/g, '') === targetClean);
         if (key && rec[key] !== undefined && rec[key] !== null) {
           return String(rec[key]).trim();
         }
@@ -61,15 +144,32 @@ export class ImportService {
       return '';
     };
 
-    const studentId = findValue(['student id', 'studentid', 'roll no', 'rollno', 'student_id', 'id']);
-    const name = findValue(['candidate name', 'candidatename', 'name', 'student name', 'studentname']);
+    const studentId = findValue(['roll no', 'rollno', 'student id', 'studentid', 'student_id', 'hallticket', 'hall ticket', 'regno', 'reg no', 'id']);
+    const name = findValue(['candidate name', 'candidatename', 'name', 'student name', 'studentname', 'sname']);
     
     // Combine Course and Branch if both exist
-    const course = findValue(['course', 'program', 'degree']);
-    const branch = findValue(['branch', 'department', 'stream']);
-    const program = course && branch ? `${course} - ${branch}` : course || branch || 'General';
+    const course = findValue(['course', 'program', 'degree', 'be', 'btech', 'ug']);
+    const branch = findValue(['branch', 'department', 'stream', 'dept']);
+    let program = 'General';
+    if (course && branch) {
+      program = course.toUpperCase() === branch.toUpperCase() ? course : `${course} - ${branch}`;
+    } else if (course) {
+      program = course;
+    } else if (branch) {
+      program = branch;
+    }
 
-    const paymentStatus = findValue(['payment status', 'paymentstatus', 'status', 'fee status', 'registaration fee status']);
+    const paymentStatus = findValue([
+      'status',
+      'payment status',
+      'paymentstatus',
+      'fee status',
+      'feestatus',
+      'paid status',
+      'registaration fee status',
+      'registration fee status',
+      'reg fee status'
+    ]);
 
     return { studentId, name, program, paymentStatus };
   }
@@ -163,66 +263,71 @@ export class ImportService {
     let rejectedRows = 0;
     let duplicateStudentIds = 0;
 
-    for (const row of previewRows) {
-      if (!row.isValid) {
-        rejectedRows++;
-        if (row.error?.includes('Duplicate Student ID')) {
-          duplicateStudentIds++;
-        }
-        continue;
-      }
+    const validRows = previewRows.filter((r) => r.isValid);
+    rejectedRows = previewRows.length - validRows.length;
+    duplicateStudentIds = previewRows.filter((r) => r.error?.includes('Duplicate Student ID')).length;
 
-      const existingCandidate = await prisma.candidate.findUnique({
-        where: { studentId: row.studentId },
-      });
+    const studentIds = validRows.map((r) => r.studentId);
+    const existingCandidates = await prisma.candidate.findMany({
+      where: { studentId: { in: studentIds } },
+    });
 
-      const normalizedStatus = row.normalizedPaymentStatus;
-      const isEligible = EligibilityService.calculateEligibility(normalizedStatus);
+    const existingMap = new Map(existingCandidates.map((c) => [c.studentId, c]));
 
-      if (!existingCandidate) {
-        await prisma.candidate.create({
-          data: {
-            studentId: row.studentId,
-            name: row.name,
-            program: row.program,
-            paymentStatus: row.paymentStatus,
-            normalizedPaymentStatus: normalizedStatus,
-            eligibilityStatus: isEligible,
-            registrationStatus: 'NOT_REGISTERED',
-          },
-        });
-        newCandidates++;
-      } else {
-        const hasChanged =
-          existingCandidate.name !== row.name ||
-          existingCandidate.program !== row.program ||
-          existingCandidate.normalizedPaymentStatus !== normalizedStatus;
+    const CHUNK_SIZE = 20;
+    for (let i = 0; i < validRows.length; i += CHUNK_SIZE) {
+      const chunk = validRows.slice(i, i + CHUNK_SIZE);
+      await Promise.all(
+        chunk.map(async (row) => {
+          const existing = existingMap.get(row.studentId);
+          const normalizedStatus = row.normalizedPaymentStatus;
+          const isEligible = EligibilityService.calculateEligibility(normalizedStatus);
 
-        if (hasChanged) {
-          await prisma.candidate.update({
-            where: { studentId: row.studentId },
-            data: {
-              name: row.name,
-              program: row.program,
-              paymentStatus: row.paymentStatus,
-              normalizedPaymentStatus: normalizedStatus,
-              eligibilityStatus: isEligible,
-            },
-          });
-
-          // If eligibility changed to false, deactivate active QR tokens
-          if (!isEligible) {
-            await prisma.qrToken.updateMany({
-              where: { candidateId: existingCandidate.id },
-              data: { isActive: false },
+          if (!existing) {
+            await prisma.candidate.create({
+              data: {
+                studentId: row.studentId,
+                name: row.name,
+                program: row.program,
+                paymentStatus: row.paymentStatus,
+                normalizedPaymentStatus: normalizedStatus,
+                eligibilityStatus: isEligible,
+                registrationStatus: 'NOT_REGISTERED',
+              },
             });
-          }
+            newCandidates++;
+          } else {
+            const hasChanged =
+              existing.name !== row.name ||
+              existing.program !== row.program ||
+              existing.normalizedPaymentStatus !== normalizedStatus;
 
-          updatedCandidates++;
-        } else {
-          unchangedCandidates++;
-        }
-      }
+            if (hasChanged) {
+              await prisma.candidate.update({
+                where: { studentId: row.studentId },
+                data: {
+                  name: row.name,
+                  program: row.program,
+                  paymentStatus: row.paymentStatus,
+                  normalizedPaymentStatus: normalizedStatus,
+                  eligibilityStatus: isEligible,
+                },
+              });
+
+              if (!isEligible) {
+                await prisma.qrToken.updateMany({
+                  where: { candidateId: existing.id },
+                  data: { isActive: false },
+                });
+              }
+
+              updatedCandidates++;
+            } else {
+              unchangedCandidates++;
+            }
+          }
+        })
+      );
     }
 
     // Record import log

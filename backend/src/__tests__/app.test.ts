@@ -6,6 +6,8 @@ import { EligibilityService } from '../services/eligibilityService';
 import { QrService } from '../services/qrService';
 import { ImportService } from '../services/importService';
 
+import { JwtUtils } from '../utils/jwt';
+
 const prisma = new PrismaClient();
 
 let adminToken: string;
@@ -19,7 +21,6 @@ beforeAll(async () => {
   await prisma.user.deleteMany();
 
   // Create admin account
-  await request(app).post('/api/auth/login'); // fallback
   const adminUser = await prisma.user.create({
     data: {
       username: 'admin@test.com',
@@ -29,13 +30,6 @@ beforeAll(async () => {
     },
   });
 
-  // Login to obtain JWT
-  const loginRes = await request(app).post('/api/auth/login').send({
-    username: 'admin@test.com',
-    password: 'wrongpassword', // will fail, so let's issue token directly using JwtUtils
-  });
-
-  const { JwtUtils } = await import('../utils/jwt');
   adminToken = JwtUtils.signToken({
     userId: adminUser.id,
     username: adminUser.username,

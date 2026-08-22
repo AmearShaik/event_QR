@@ -28,6 +28,10 @@ export function getApiBaseUrl(): string {
     return envUrl.endsWith('/api') ? envUrl : `${envUrl}/api`;
   }
 
+  if (isNativePlatform()) {
+    return 'https://graduation-day-backend-yy69.onrender.com/api';
+  }
+
   return '/api';
 }
 
@@ -46,12 +50,12 @@ async function safeFetch(url: string, options?: RequestInit): Promise<Response> 
     
     if (isMobile && isLocal && !localStorage.getItem('qr_server_url')) {
       throw new Error(
-        `Cannot reach backend server. Mobile app is not connected to a server URL. Please tap the Server button at top-right to enter your PC's IP (e.g. http://192.168.1.19:5000).`
+        `Cannot reach backend server. Please tap the Server button to enter your host PC's Wi-Fi IP (e.g. http://10.213.207.38:5000).`
       );
     }
     
     throw new Error(
-      `Cannot connect to backend server (${activeBase}). Please verify the backend is running and accessible on this network.`
+      `Cannot connect to backend server at ${activeBase}. Please check that your phone is connected to the same Wi-Fi network and backend is running.`
     );
   }
 }
@@ -113,17 +117,22 @@ export const api = {
   getRecommendedPresets: (): Array<{ label: string; url: string; desc: string }> => {
     return [
       {
-        label: 'Local Wi-Fi (Default PC IP)',
+        label: 'Render Cloud Backend (Production)',
+        url: 'https://graduation-day-backend-yy69.onrender.com',
+        desc: 'Official cloud server accessible everywhere over the internet',
+      },
+      {
+        label: 'Current Wi-Fi Host IP',
+        url: 'http://10.213.207.38:5000',
+        desc: 'For local testing on same Wi-Fi as host computer',
+      },
+      {
+        label: 'Alternate Local Wi-Fi',
         url: 'http://192.168.1.19:5000',
-        desc: 'For testing phone connected to same Wi-Fi as host PC',
+        desc: 'Alternate Wi-Fi network host address',
       },
       {
-        label: 'Android Emulator',
-        url: 'http://10.0.2.2:5000',
-        desc: 'Default host loopback address for Android Studio Emulator',
-      },
-      {
-        label: 'Localhost (Dev PC)',
+        label: 'Localhost (Dev PC Browser)',
         url: 'http://localhost:5000',
         desc: 'For local browser development on this computer',
       },

@@ -81,12 +81,18 @@ export class CandidateController {
       });
 
       if (!event) {
-        // Fallback: fetch default event
-        event = await prisma.event.findFirst({ where: { slug: 'attendance' } });
-      }
-
-      if (!event) {
-        return res.status(400).json({ error: 'No active event available.' });
+        // Fallback: fetch default event or auto-create
+        event = await prisma.event.upsert({
+          where: { slug: 'attendance' },
+          update: { isActive: true },
+          create: {
+            slug: 'attendance',
+            name: 'Graduation Day 2026',
+            description: 'Official Entrance Attendance & Gate Pass Verification for Graduation Day 2026',
+            isActive: true,
+            requiresPayment: false,
+          },
+        });
       }
 
       // Get or create single active QR token for candidate + event
@@ -159,14 +165,20 @@ export class CandidateController {
 
       // Removed payment and eligibility checks to allow all students.
 
-      // Active Event lookup
+      // Active Event lookup with auto-creation fallback
       let activeEvent = await prisma.event.findFirst({ where: { isActive: true } });
       if (!activeEvent) {
-        activeEvent = await prisma.event.findFirst({ where: { slug: 'attendance' } });
-      }
-
-      if (!activeEvent) {
-        return res.status(400).json({ error: 'No active ceremony event available.' });
+        activeEvent = await prisma.event.upsert({
+          where: { slug: 'attendance' },
+          update: { isActive: true },
+          create: {
+            slug: 'attendance',
+            name: 'Graduation Day 2026',
+            description: 'Official Entrance Attendance & Gate Pass Verification for Graduation Day 2026',
+            isActive: true,
+            requiresPayment: false,
+          },
+        });
       }
 
       // Get or create single active QR token immediately for candidate + event
